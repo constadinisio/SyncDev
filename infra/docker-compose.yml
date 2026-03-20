@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_COLLAB_WS_URL=ws://localhost:4000
+    depends_on:
+      - collab
+    networks:
+      - collab-net
+
+  collab:
+    build:
+      context: ../services/collab
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - SNAPSHOT_DIR=/data/snapshots
+      - SNAPSHOT_DEBOUNCE_MS=2000
+      - SNAPSHOT_INTERVAL_MS=30000
+      - ROOM_GRACE_PERIOD_MS=30000
+    volumes:
+      - snapshot-data:/data/snapshots
+    networks:
+      - collab-net
+
+networks:
+  collab-net:
+    driver: bridge
+
+volumes:
+  snapshot-data:
+    driver: local

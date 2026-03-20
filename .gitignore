@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+package-lock.json
+
+# Storage (runtime data)
+storage/snapshots/*.ystate
+storage/workspaces/
+storage/projects/*.json
+storage/sandboxes/
+
+# Environment
+.env.local
+.env
+
+# OS
+.DS_Store
+Thumbs.db
