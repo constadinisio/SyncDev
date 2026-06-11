@@ -59,6 +59,19 @@ describe("loadConfig", () => {
       loadConfig({ NODE_ENV: "development", AUTH_ENFORCED: "maybe" } as NodeJS.ProcessEnv),
     ).toThrow(/AUTH_ENFORCED/);
   });
+
+  it("exposes environment defaults", () => {
+    const cfg = loadConfig({ NODE_ENV: "development" } as NodeJS.ProcessEnv);
+    expect(cfg.environments.enabled).toBe(false);
+    expect(cfg.environments.defaultImage).toContain("devcontainers");
+    expect(cfg.environments.maxActive).toBe(5);
+    expect(cfg.environments.idleMs).toBe(600000);
+  });
+
+  it("enables environments by default in production", () => {
+    const cfg = loadConfig(PROD_BASE);
+    expect(cfg.environments.enabled).toBe(true);
+  });
 });
 
 describe("isOriginAllowed", () => {
