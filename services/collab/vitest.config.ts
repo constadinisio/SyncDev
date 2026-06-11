@@ -19,6 +19,9 @@ export default defineConfig({
         "src/lib/rate-limit.ts",
         "src/lib/memberships.ts",
         "src/lib/auth.ts",
+        "src/persistence/snapshot-store.ts",
+        "src/api/file-tree.ts",
+        "src/persistence/disk-sync.ts",
       ],
       thresholds: {
         statements: 80,
