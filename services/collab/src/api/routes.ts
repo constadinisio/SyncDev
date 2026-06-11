@@ -18,7 +18,7 @@ import { handleCloneRequest } from "./clone.js";
 import { handleAssetRequest } from "./assets.js";
 import { handleReplaceRequest } from "./replace.js";
 import { handleSyncRequest } from "./sync.js";
-import { handleEnvStatus, handleEnvAction, handleEnvEvents } from "./environments.js";
+import { handleEnvStatus, handleEnvAction, handleEnvEvents, handleEnvScaffold } from "./environments.js";
 import { logError } from "../lib/logger.js";
 import { loadConfig } from "../lib/config.js";
 import { buildCorsHeaders, writeJson } from "../lib/http.js";
@@ -285,6 +285,15 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(envEventsMatch[1]);
     if (!authorize(pid)) return true;
     handleEnvEvents(req, res, pid, origin);
+    return true;
+  }
+
+  // POST /api/env/:projectId/scaffold — create a starter devcontainer.json
+  const envScaffoldMatch = url.match(/^\/api\/env\/([^/?]+)\/scaffold/);
+  if (envScaffoldMatch && method === "POST") {
+    const pid = decodeURIComponent(envScaffoldMatch[1]);
+    if (!authorize(pid)) return true;
+    handleEnvScaffold(res, pid, origin);
     return true;
   }
 
