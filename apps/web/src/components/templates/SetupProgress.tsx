@@ -17,13 +17,7 @@ interface SetupProgressProps {
   readonly onOpen: () => void;
 }
 
-export function SetupProgress({
-  template,
-  steps,
-  done,
-  error,
-  onOpen,
-}: SetupProgressProps) {
+export function SetupProgress({ template, steps, done, error, onOpen }: SetupProgressProps) {
   const [dots, setDots] = useState("");
 
   useEffect(() => {
@@ -35,140 +29,58 @@ export function SetupProgress({
   }, [done, error]);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-        zIndex: 2000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[2000] flex items-center justify-center font-sans animate-fade-in">
       <div
-        style={{
-          backgroundColor: "#1e1e1e",
-          border: "1px solid #404040",
-          borderRadius: 8,
-          padding: "32px 40px",
-          minWidth: 400,
-          maxWidth: 500,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 24,
-        }}
+        className="bg-surface-100 border border-surface-300/60 rounded-2xl p-10 min-w-[420px] max-w-[520px]
+        flex flex-col items-center gap-6 shadow-2xl shadow-black/40 animate-scale-in"
       >
         {/* Template icon and name */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 48 }}>{template.icon}</span>
-          <h2 style={{ color: "#d4d4d4", fontSize: 18, fontWeight: 600, margin: 0 }}>
-            Setting up {template.name}
-          </h2>
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-5xl">{template.icon}</span>
+          <h2 className="text-surface-900 text-lg font-semibold m-0">Setting up {template.name}</h2>
           {!done && !error && (
-            <span style={{ color: "#808080", fontSize: 13 }}>
-              This may take a minute{dots}
-            </span>
+            <span className="text-surface-500 text-[13px]">This may take a minute{dots}</span>
           )}
         </div>
 
         {/* Steps */}
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
+        <div className="w-full flex flex-col gap-3">
           {steps.map((step, i) => (
             <div
               key={i}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "8px 12px",
-                backgroundColor: "#252526",
-                borderRadius: 4,
-                border: `1px solid ${
+              className={`flex items-center gap-3 p-3 bg-surface-150 rounded-lg border transition-colors duration-200
+                ${
                   step.status === "error"
-                    ? "#f48771"
+                    ? "border-accent-red/50"
                     : step.status === "running"
-                      ? "#0e639c"
-                      : "#333333"
-                }`,
-              }}
+                      ? "border-brand-500/50"
+                      : "border-surface-300/40"
+                }`}
             >
-              {/* Status icon */}
-              <span
-                style={{
-                  fontSize: 16,
-                  width: 20,
-                  textAlign: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {step.status === "pending" && (
-                  <span style={{ color: "#555" }}>○</span>
-                )}
+              <span className="text-base w-5 text-center shrink-0">
+                {step.status === "pending" && <span className="text-surface-400">&#x25CB;</span>}
                 {step.status === "running" && (
-                  <span
-                    style={{
-                      color: "#0e639c",
-                      display: "inline-block",
-                      animation: "spin 1s linear infinite",
-                    }}
-                  >
-                    ◌
-                  </span>
+                  <span className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin inline-block" />
                 )}
-                {step.status === "done" && (
-                  <span style={{ color: "#73c991" }}>✓</span>
-                )}
-                {step.status === "error" && (
-                  <span style={{ color: "#f48771" }}>✗</span>
-                )}
+                {step.status === "done" && <span className="text-accent-green">&#x2713;</span>}
+                {step.status === "error" && <span className="text-accent-red">&#x2717;</span>}
               </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex-1 min-w-0">
                 <span
-                  style={{
-                    color:
-                      step.status === "done"
-                        ? "#73c991"
-                        : step.status === "error"
-                          ? "#f48771"
-                          : step.status === "running"
-                            ? "#d4d4d4"
-                            : "#808080",
-                    fontSize: 13,
-                  }}
+                  className={`text-[13px] ${
+                    step.status === "done"
+                      ? "text-accent-green"
+                      : step.status === "error"
+                        ? "text-accent-red"
+                        : step.status === "running"
+                          ? "text-surface-800"
+                          : "text-surface-500"
+                  }`}
                 >
                   {step.label}
                 </span>
                 {step.error && (
-                  <div
-                    style={{
-                      color: "#f48771",
-                      fontSize: 11,
-                      marginTop: 4,
-                      whiteSpace: "pre-wrap",
-                      maxHeight: 60,
-                      overflow: "auto",
-                    }}
-                  >
+                  <div className="text-accent-red text-[11px] mt-1 whitespace-pre-wrap max-h-[60px] overflow-auto">
                     {step.error}
                   </div>
                 )}
@@ -177,67 +89,28 @@ export function SetupProgress({
           ))}
         </div>
 
-        {/* Error message */}
         {error && (
-          <div
-            style={{
-              color: "#f48771",
-              fontSize: 13,
-              textAlign: "center",
-              padding: "8px 12px",
-              backgroundColor: "#3a1d1d",
-              borderRadius: 4,
-              width: "100%",
-            }}
-          >
+          <div className="text-accent-red text-[13px] text-center p-3 bg-red-900/10 rounded-lg w-full border border-accent-red/20">
             {error}
           </div>
         )}
 
-        {/* Post-creation message */}
         {done && template.postMessage && (
-          <div
-            style={{
-              color: "#73c991",
-              fontSize: 13,
-              textAlign: "center",
-              padding: "8px 12px",
-              backgroundColor: "#1d3a28",
-              borderRadius: 4,
-              width: "100%",
-            }}
-          >
+          <div className="text-accent-green text-[13px] text-center p-3 bg-green-900/10 rounded-lg w-full border border-accent-green/20">
             {template.postMessage}
           </div>
         )}
 
-        {/* Open Project button */}
         {(done || error) && (
           <button
             onClick={onOpen}
-            style={{
-              padding: "8px 24px",
-              fontSize: 14,
-              backgroundColor: "#0e639c",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-            }}
+            className="px-6 py-2.5 text-sm bg-brand-600 hover:bg-brand-500 text-white font-semibold
+              rounded-lg cursor-pointer transition-colors duration-150 shadow-lg shadow-brand-600/25"
           >
             {done ? "Open Project" : "Continue Anyway"}
           </button>
         )}
       </div>
-
-      {/* Inline keyframes for spinner */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

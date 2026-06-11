@@ -1,0 +1,35 @@
+# Node modules (installed fresh via npm ci in each Dockerfile)
+node_modules/
+apps/web/node_modules/
+services/collab/node_modules/
+
+# Next.js build output
+apps/web/.next/
+
+# Collab build output and coverage
+services/collab/dist/
+services/collab/coverage/
+
+# Runtime data / dev snapshots
+storage/
+services/collab/storage/
+apps/web/.storybook/
+
+# Git internals
+.git/
+.github/
+
+# Local env files (never bake secrets into images)
+.env
+.env.local
+infra/.env
+apps/web/.env.local
+services/collab/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db

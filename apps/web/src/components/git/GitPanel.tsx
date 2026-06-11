@@ -16,6 +16,8 @@ import {
   gitDiscard,
   gitDiff,
   gitInit,
+  gitRemoteGet,
+  gitRemoteSet,
   type GitFileChange,
   type GitLogEntry,
 } from "@/lib/git-api";
@@ -32,11 +34,11 @@ type StatusMessage = {
 };
 
 const STATUS_COLORS: Record<GitFileChange["status"], string> = {
-  modified: "#e2c08d",
-  added: "#73c991",
-  deleted: "#c74e39",
-  untracked: "#73c991",
-  renamed: "#73b7f2",
+  modified: "text-accent-yellow",
+  added: "text-accent-green",
+  deleted: "text-accent-red",
+  untracked: "text-accent-green",
+  renamed: "text-accent-blue",
 };
 
 const STATUS_LETTERS: Record<GitFileChange["status"], string> = {
@@ -60,7 +62,6 @@ function FileChangeRow({
   readonly onDiscard?: () => void;
   readonly onClick?: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
   const fileName = change.path.split("/").pop() ?? change.path;
   const dirPath = change.path.includes("/")
     ? change.path.substring(0, change.path.lastIndexOf("/"))
@@ -68,130 +69,53 @@ function FileChangeRow({
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "2px 8px 2px 20px",
-        fontSize: 12,
-        fontFamily: "system-ui, sans-serif",
-        color: "#d4d4d4",
-        cursor: "pointer",
-        backgroundColor: hovered ? "#2a2d2e" : "transparent",
-        gap: 4,
-        minHeight: 22,
-      }}
+      className="group flex items-center py-0.5 pr-2 pl-5 text-xs font-sans text-surface-800
+        cursor-pointer hover:bg-surface-200 transition-colors duration-75 gap-1 min-h-[22px]"
     >
-      {/* File name */}
+      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1">
+        <span className={STATUS_COLORS[change.status]}>{fileName}</span>
+        {dirPath && <span className="text-surface-500 text-[11px]">{dirPath}</span>}
+      </span>
+
       <span
-        style={{
-          flex: 1,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-        }}
+        className="hidden group-hover:flex gap-0.5 shrink-0"
+        onClick={(e) => e.stopPropagation()}
       >
-        <span style={{ color: STATUS_COLORS[change.status] }}>{fileName}</span>
-        {dirPath && (
-          <span style={{ color: "#808080", fontSize: 11 }}>{dirPath}</span>
+        {onDiscard && (
+          <button
+            onClick={onDiscard}
+            title="Discard Changes"
+            className="bg-transparent border-none text-surface-500 hover:text-surface-800
+              cursor-pointer text-sm p-0.5 rounded transition-colors duration-100"
+          >
+            &#x21BA;
+          </button>
+        )}
+        {onStage && (
+          <button
+            onClick={onStage}
+            title="Stage Changes"
+            className="bg-transparent border-none text-surface-500 hover:text-accent-green
+              cursor-pointer text-sm p-0.5 rounded font-bold transition-colors duration-100"
+          >
+            +
+          </button>
+        )}
+        {onUnstage && (
+          <button
+            onClick={onUnstage}
+            title="Unstage Changes"
+            className="bg-transparent border-none text-surface-500 hover:text-accent-red
+              cursor-pointer text-sm p-0.5 rounded font-bold transition-colors duration-100"
+          >
+            &#x2212;
+          </button>
         )}
       </span>
 
-      {/* Action buttons - shown on hover */}
-      {hovered && (
-        <span
-          style={{ display: "flex", gap: 2, flexShrink: 0 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {onDiscard && (
-            <button
-              onClick={onDiscard}
-              title="Discard Changes"
-              style={{
-                background: "none",
-                border: "none",
-                color: "#808080",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "0 3px",
-                lineHeight: 1,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#808080";
-              }}
-            >
-              ↺
-            </button>
-          )}
-          {onStage && (
-            <button
-              onClick={onStage}
-              title="Stage Changes"
-              style={{
-                background: "none",
-                border: "none",
-                color: "#808080",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "0 3px",
-                lineHeight: 1,
-                fontWeight: 700,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#808080";
-              }}
-            >
-              +
-            </button>
-          )}
-          {onUnstage && (
-            <button
-              onClick={onUnstage}
-              title="Unstage Changes"
-              style={{
-                background: "none",
-                border: "none",
-                color: "#808080",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "0 3px",
-                lineHeight: 1,
-                fontWeight: 700,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#808080";
-              }}
-            >
-              −
-            </button>
-          )}
-        </span>
-      )}
-
-      {/* Status indicator */}
       <span
-        style={{
-          color: STATUS_COLORS[change.status],
-          fontSize: 11,
-          fontWeight: 600,
-          width: 14,
-          textAlign: "center",
-          flexShrink: 0,
-        }}
+        className={`${STATUS_COLORS[change.status]} text-[11px] font-semibold w-3.5 text-center shrink-0`}
       >
         {STATUS_LETTERS[change.status]}
       </span>
@@ -215,43 +139,29 @@ function SectionHeader({
   return (
     <div
       onClick={onToggle}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "4px 8px",
-        fontSize: 11,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        color: "#bbbbbb",
-        fontFamily: "system-ui, sans-serif",
-        cursor: "pointer",
-        userSelect: "none",
-        backgroundColor: "#2d2d2d",
-        gap: 4,
-      }}
+      className="flex items-center px-2 py-1 text-[11px] font-semibold uppercase tracking-wider
+        text-surface-600 font-sans cursor-pointer select-none bg-surface-200 gap-1
+        hover:bg-surface-300/50 transition-colors duration-75"
     >
-      <span style={{ fontSize: 10, width: 12, textAlign: "center" }}>
-        {collapsed ? "▸" : "▾"}
-      </span>
-      <span>{title}</span>
-      <span
-        style={{
-          fontSize: 10,
-          color: "#808080",
-          backgroundColor: "#404040",
-          padding: "0 5px",
-          borderRadius: 8,
-          marginLeft: 4,
-        }}
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`text-surface-500 transition-transform duration-100 ${collapsed ? "-rotate-90" : ""}`}
       >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+      <span>{title}</span>
+      <span className="text-[10px] text-surface-500 bg-surface-300 px-1.5 rounded-full ml-1">
         {count}
       </span>
       {actions && (
-        <span
-          style={{ marginLeft: "auto", display: "flex", gap: 2 }}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <span className="ml-auto flex gap-0.5" onClick={(e) => e.stopPropagation()}>
           {actions}
         </span>
       )}
@@ -272,21 +182,8 @@ function SmallButton({
     <button
       onClick={onClick}
       title={title}
-      style={{
-        background: "none",
-        border: "none",
-        color: "#808080",
-        cursor: "pointer",
-        fontSize: 13,
-        padding: "0 3px",
-        lineHeight: 1,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.color = "#d4d4d4";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.color = "#808080";
-      }}
+      className="bg-transparent border-none text-surface-500 hover:text-surface-800
+        cursor-pointer text-[13px] p-0.5 rounded transition-colors duration-100"
     >
       {children}
     </button>
@@ -308,29 +205,40 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
   const [branchCollapsed, setBranchCollapsed] = useState(true);
   const [newBranchName, setNewBranchName] = useState("");
   const [showNewBranch, setShowNewBranch] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState("");
+  const [remoteInput, setRemoteInput] = useState("");
+  const [showRemoteInput, setShowRemoteInput] = useState(false);
+  const [gitToken, setGitToken] = useState("");
+  const [tokenInput, setTokenInput] = useState("");
+  const [showTokenInput, setShowTokenInput] = useState(false);
+
+  // Load saved token from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`syncdev-git-token-${projectId}`);
+    if (saved) setGitToken(saved);
+  }, [projectId]);
 
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showStatus = useCallback(
-    (text: string, type: StatusMessage["type"]) => {
-      setStatusMsg({ text, type });
-      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-      statusTimerRef.current = setTimeout(() => setStatusMsg(null), 4000);
-    },
-    [],
-  );
+  const showStatus = useCallback((text: string, type: StatusMessage["type"]) => {
+    setStatusMsg({ text, type });
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setStatusMsg(null), 4000);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [statusResult, branchResult, logResult] = await Promise.all([
+      const [statusResult, branchResult, logResult, remote] = await Promise.all([
         gitStatus(projectId).catch(() => [] as readonly GitFileChange[]),
         gitBranch(projectId).catch(() => ""),
         gitLog(projectId, 10).catch(() => [] as readonly GitLogEntry[]),
+        gitRemoteGet(projectId).catch(() => ""),
       ]);
       setChanges(statusResult);
       setBranch(branchResult);
       setLogEntries(logResult);
+      setRemoteUrl(getCleanUrl(remote));
       setIsGitRepo(branchResult !== "" || statusResult.length > 0);
     } catch {
       setIsGitRepo(false);
@@ -352,10 +260,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
         await gitStage(projectId, filePath);
         await refresh();
       } catch (err) {
-        showStatus(
-          err instanceof Error ? err.message : "Stage failed",
-          "error",
-        );
+        showStatus(err instanceof Error ? err.message : "Stage failed", "error");
       }
     },
     [projectId, refresh, showStatus],
@@ -367,10 +272,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
         await gitUnstage(projectId, filePath);
         await refresh();
       } catch (err) {
-        showStatus(
-          err instanceof Error ? err.message : "Unstage failed",
-          "error",
-        );
+        showStatus(err instanceof Error ? err.message : "Unstage failed", "error");
       }
     },
     [projectId, refresh, showStatus],
@@ -383,10 +285,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
         await refresh();
         showStatus(`Discarded changes to ${filePath}`, "info");
       } catch (err) {
-        showStatus(
-          err instanceof Error ? err.message : "Discard failed",
-          "error",
-        );
+        showStatus(err instanceof Error ? err.message : "Discard failed", "error");
       }
     },
     [projectId, refresh, showStatus],
@@ -397,10 +296,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       await gitStageAll(projectId);
       await refresh();
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Stage all failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Stage all failed", "error");
     }
   }, [projectId, refresh, showStatus]);
 
@@ -409,10 +305,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       await gitUnstageAll(projectId);
       await refresh();
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Unstage all failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Unstage all failed", "error");
     }
   }, [projectId, refresh, showStatus]);
 
@@ -427,10 +320,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       await refresh();
       showStatus("Commit successful", "success");
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Commit failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Commit failed", "error");
     }
   }, [projectId, commitMessage, refresh, showStatus]);
 
@@ -439,10 +329,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       const result = await gitPush(projectId);
       showStatus(result, "success");
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Push failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Push failed", "error");
     }
   }, [projectId, showStatus]);
 
@@ -452,10 +339,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       showStatus(result, "success");
       await refresh();
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Pull failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Pull failed", "error");
     }
   }, [projectId, refresh, showStatus]);
 
@@ -468,10 +352,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       await refresh();
       showStatus(`Switched to new branch '${newBranchName.trim()}'`, "success");
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "Create branch failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "Create branch failed", "error");
     }
   }, [projectId, newBranchName, refresh, showStatus]);
 
@@ -482,12 +363,80 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       await refresh();
       showStatus("Git repository initialized", "success");
     } catch (err) {
-      showStatus(
-        err instanceof Error ? err.message : "git init failed",
-        "error",
-      );
+      showStatus(err instanceof Error ? err.message : "git init failed", "error");
     }
   }, [projectId, refresh, showStatus]);
+
+  // Build an authenticated URL by injecting the token
+  const buildAuthUrl = useCallback((url: string, token: string): string => {
+    if (!token || !url) return url;
+    try {
+      // Only inject token for https URLs
+      if (url.startsWith("https://")) {
+        const parsed = new URL(url);
+        parsed.username = token;
+        parsed.password = "";
+        return parsed.toString();
+      }
+    } catch {
+      // Invalid URL, return as-is
+    }
+    return url;
+  }, []);
+
+  // Get the display-safe URL (without token)
+  const getCleanUrl = useCallback((url: string): string => {
+    try {
+      if (url.startsWith("https://")) {
+        const parsed = new URL(url);
+        if (parsed.username) {
+          parsed.username = "";
+          parsed.password = "";
+          return parsed.toString();
+        }
+      }
+    } catch {
+      // Invalid URL
+    }
+    return url;
+  }, []);
+
+  const handleSetRemote = useCallback(async () => {
+    if (!remoteInput.trim()) return;
+    try {
+      const cleanUrl = remoteInput.trim();
+      // Set the remote with token if available
+      const authUrl = buildAuthUrl(cleanUrl, gitToken);
+      await gitRemoteSet(projectId, authUrl);
+      setRemoteUrl(cleanUrl);
+      setShowRemoteInput(false);
+      setRemoteInput("");
+      showStatus("Remote URL set successfully", "success");
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Failed to set remote", "error");
+    }
+  }, [projectId, remoteInput, gitToken, buildAuthUrl, showStatus]);
+
+  const handleSaveToken = useCallback(async () => {
+    const token = tokenInput.trim();
+    setGitToken(token);
+    localStorage.setItem(`syncdev-git-token-${projectId}`, token);
+    setShowTokenInput(false);
+    setTokenInput("");
+
+    // Update remote URL with new token if remote is already set
+    if (remoteUrl) {
+      try {
+        const authUrl = buildAuthUrl(remoteUrl, token);
+        await gitRemoteSet(projectId, authUrl);
+        showStatus("Token saved and remote updated", "success");
+      } catch (err) {
+        showStatus("Token saved but failed to update remote", "warning" as StatusMessage["type"]);
+      }
+    } else {
+      showStatus("Token saved", "success");
+    }
+  }, [tokenInput, projectId, remoteUrl, buildAuthUrl, showStatus]);
 
   const handleFileDiff = useCallback(
     async (filePath: string) => {
@@ -495,97 +444,50 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
         const diff = await gitDiff(projectId, filePath);
         onShowDiff?.(filePath, diff);
       } catch (err) {
-        showStatus(
-          err instanceof Error ? err.message : "Diff failed",
-          "error",
-        );
+        showStatus(err instanceof Error ? err.message : "Diff failed", "error");
       }
     },
     [projectId, onShowDiff, showStatus],
   );
 
+  const canCommit = commitMessage.trim() && stagedChanges.length > 0;
+
   if (!isGitRepo) {
     return (
-      <div
-        style={{
-          height: "100%",
-          backgroundColor: "#252526",
-          borderRight: "1px solid #404040",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
         <div
-          style={{
-            padding: "8px 12px",
-            fontSize: 11,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.5px",
-            color: "#bbbbbb",
-            fontFamily: "system-ui, sans-serif",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+          className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+          font-sans flex justify-between items-center"
         >
           <span>Source Control</span>
           <button
             onClick={onBack}
             title="Back to Explorer"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#cccccc",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: "0 4px",
-              lineHeight: 1,
-            }}
+            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100"
           >
-            &#x2190;
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
           </button>
         </div>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-            gap: 12,
-          }}
-        >
-          <span
-            style={{
-              color: "#808080",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-              textAlign: "center",
-            }}
-          >
+        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-3">
+          <span className="text-surface-500 text-xs font-sans text-center">
             This project is not a git repository.
           </span>
           <button
             onClick={handleInitRepo}
-            style={{
-              padding: "6px 16px",
-              fontSize: 12,
-              backgroundColor: "#0e639c",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#1177bb";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#0e639c";
-            }}
+            className="px-4 py-2 text-xs bg-brand-600 hover:bg-brand-500 text-white rounded-lg
+              cursor-pointer font-sans font-medium transition-colors duration-150"
           >
             Initialize Repository
           </button>
@@ -595,77 +497,67 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
   }
 
   return (
-    <div
-      style={{
-        height: "100%",
-        backgroundColor: "#252526",
-        borderRight: "1px solid #404040",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
       <div
-        style={{
-          padding: "8px 12px",
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          color: "#bbbbbb",
-          fontFamily: "system-ui, sans-serif",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center"
       >
         <span>Source Control</span>
-        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+        <div className="flex gap-1 items-center">
           <SmallButton title="Refresh" onClick={refresh}>
             &#x21BB;
           </SmallButton>
           <button
             onClick={onBack}
             title="Back to Explorer"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#cccccc",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: "0 4px",
-              lineHeight: 1,
-            }}
+            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100"
           >
-            &#x2190;
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
           </button>
         </div>
       </div>
 
       {/* Branch info */}
-      <div
-        style={{
-          padding: "4px 12px 8px",
-          fontSize: 12,
-          fontFamily: "system-ui, sans-serif",
-          color: "#d4d4d4",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <span style={{ color: "#808080" }}>&#x2387;</span>
-        <span>{branch || "HEAD"}</span>
+      <div className="px-3 pb-2 text-xs font-sans text-surface-800 flex items-center gap-1.5">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-surface-500"
+        >
+          <line x1="6" y1="3" x2="6" y2="15" />
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M18 9a9 9 0 0 1-9 9" />
+        </svg>
+        <span className="font-medium">{branch || "HEAD"}</span>
         {loading && (
-          <span style={{ color: "#808080", fontSize: 10, marginLeft: "auto" }}>
-            loading...
+          <span className="text-surface-500 text-[10px] ml-auto flex items-center gap-1">
+            <span className="w-2.5 h-2.5 border border-brand-500 border-t-transparent rounded-full animate-spin" />
           </span>
         )}
       </div>
 
       {/* Commit input */}
-      <div style={{ padding: "0 8px 8px" }}>
+      <div className="px-2 pb-2">
         <textarea
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}
@@ -675,48 +567,20 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
               handleCommit();
             }
           }}
-          style={{
-            width: "100%",
-            padding: "4px 8px",
-            fontSize: 12,
-            fontFamily: "system-ui, sans-serif",
-            backgroundColor: "#3c3c3c",
-            color: "#d4d4d4",
-            border: "1px solid #555555",
-            borderRadius: 3,
-            outline: "none",
-            boxSizing: "border-box",
-            resize: "vertical",
-            minHeight: 28,
-            maxHeight: 120,
-            lineHeight: "18px",
-          }}
+          className="w-full p-2 text-xs font-sans bg-surface-200 text-surface-800 border border-surface-300/60
+            rounded-lg outline-none resize-y min-h-[28px] max-h-[120px] leading-[18px]
+            focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
           rows={1}
         />
         <button
           onClick={handleCommit}
-          disabled={!commitMessage.trim() || stagedChanges.length === 0}
-          style={{
-            width: "100%",
-            padding: "4px 0",
-            marginTop: 4,
-            fontSize: 12,
-            fontFamily: "system-ui, sans-serif",
-            backgroundColor:
-              commitMessage.trim() && stagedChanges.length > 0
-                ? "#0e639c"
-                : "#3c3c3c",
-            color:
-              commitMessage.trim() && stagedChanges.length > 0
-                ? "#ffffff"
-                : "#808080",
-            border: "none",
-            borderRadius: 3,
-            cursor:
-              commitMessage.trim() && stagedChanges.length > 0
-                ? "pointer"
-                : "default",
-          }}
+          disabled={!canCommit}
+          className={`w-full py-1.5 mt-1 text-xs font-sans font-medium rounded-lg transition-all duration-100
+            ${
+              canCommit
+                ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
+                : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            }`}
         >
           Commit
         </button>
@@ -725,33 +589,21 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       {/* Status message */}
       {statusMsg && (
         <div
-          style={{
-            padding: "4px 12px",
-            fontSize: 11,
-            fontFamily: "system-ui, sans-serif",
-            color:
+          className={`px-3 py-1.5 text-[11px] font-sans border-y border-surface-300/40 animate-fade-in
+            ${
               statusMsg.type === "error"
-                ? "#f48771"
+                ? "text-accent-red bg-red-900/10"
                 : statusMsg.type === "success"
-                  ? "#73c991"
-                  : "#d4d4d4",
-            backgroundColor:
-              statusMsg.type === "error"
-                ? "#5a1d1d"
-                : statusMsg.type === "success"
-                  ? "#1d3a28"
-                  : "#2d2d2d",
-            borderTop: "1px solid #404040",
-            borderBottom: "1px solid #404040",
-          }}
+                  ? "text-accent-green bg-green-900/10"
+                  : "text-surface-800 bg-surface-200"
+            }`}
         >
           {statusMsg.text}
         </div>
       )}
 
       {/* File changes */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {/* Staged Changes */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {stagedChanges.length > 0 && (
           <div>
             <SectionHeader
@@ -761,7 +613,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
               onToggle={() => setStagedCollapsed((p) => !p)}
               actions={
                 <SmallButton title="Unstage All" onClick={handleUnstageAll}>
-                  −
+                  &#x2212;
                 </SmallButton>
               }
             />
@@ -777,7 +629,6 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
           </div>
         )}
 
-        {/* Changes (unstaged) */}
         <div>
           <SectionHeader
             title="Changes"
@@ -793,14 +644,7 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
             }
           />
           {!changesCollapsed && unstagedChanges.length === 0 && (
-            <div
-              style={{
-                padding: "8px 20px",
-                fontSize: 11,
-                color: "#808080",
-                fontFamily: "system-ui, sans-serif",
-              }}
-            >
+            <div className="py-2 pl-5 text-[11px] text-surface-500 font-sans">
               No unstaged changes
             </div>
           )}
@@ -825,84 +669,191 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
             onToggle={() => setBranchCollapsed((p) => !p)}
           />
           {!branchCollapsed && (
-            <div style={{ padding: "6px 12px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 4,
-                  marginBottom: 6,
-                }}
-              >
+            <div className="p-2 flex flex-col gap-1.5">
+              <div className="flex gap-1">
                 <button
                   onClick={handlePull}
-                  style={{
-                    flex: 1,
-                    padding: "3px 0",
-                    fontSize: 11,
-                    fontFamily: "system-ui, sans-serif",
-                    backgroundColor: "#2d2d2d",
-                    color: "#d4d4d4",
-                    border: "1px solid #555",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#3c3c3c";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#2d2d2d";
-                  }}
+                  className="flex-1 py-1 text-[11px] font-sans bg-surface-200 text-surface-700
+                    border border-surface-300/60 rounded-md cursor-pointer hover:bg-surface-300
+                    transition-colors duration-100"
                 >
                   &#x2193; Pull
                 </button>
                 <button
                   onClick={handlePush}
-                  style={{
-                    flex: 1,
-                    padding: "3px 0",
-                    fontSize: 11,
-                    fontFamily: "system-ui, sans-serif",
-                    backgroundColor: "#2d2d2d",
-                    color: "#d4d4d4",
-                    border: "1px solid #555",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#3c3c3c";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#2d2d2d";
-                  }}
+                  className="flex-1 py-1 text-[11px] font-sans bg-surface-200 text-surface-700
+                    border border-surface-300/60 rounded-md cursor-pointer hover:bg-surface-300
+                    transition-colors duration-100"
                 >
                   &#x2191; Push
                 </button>
               </div>
+              {/* Remote URL */}
+              <div className="flex flex-col gap-1.5 mt-2 p-2 bg-surface-150 rounded-lg border border-surface-300/30">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                  Remote Repository
+                </div>
+
+                {/* URL */}
+                <div className="text-[11px] text-surface-500 flex items-center gap-1">
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  {remoteUrl ? (
+                    <span className="text-surface-700 truncate flex-1" title={remoteUrl}>
+                      {getCleanUrl(remoteUrl)}
+                    </span>
+                  ) : (
+                    <span className="text-surface-400 italic flex-1">No remote configured</span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowRemoteInput(true);
+                      setRemoteInput(remoteUrl);
+                    }}
+                    className="bg-transparent border-none text-brand-400 hover:text-brand-300
+                      cursor-pointer text-[11px] transition-colors duration-100 shrink-0"
+                  >
+                    {remoteUrl ? "edit" : "set"}
+                  </button>
+                </div>
+                {showRemoteInput && (
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      value={remoteInput}
+                      onChange={(e) => setRemoteInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSetRemote();
+                        if (e.key === "Escape") {
+                          setShowRemoteInput(false);
+                          setRemoteInput("");
+                        }
+                      }}
+                      placeholder="https://github.com/user/repo.git"
+                      autoFocus
+                      className="flex-1 px-2 py-1 text-[11px] font-sans bg-surface-200 text-surface-800
+                        border border-surface-300/60 rounded-md outline-none
+                        focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
+                    />
+                    <button
+                      onClick={handleSetRemote}
+                      className="px-2 py-1 text-[11px] bg-brand-600 text-white border-none rounded-md cursor-pointer
+                        hover:bg-brand-500 transition-colors duration-100"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
+
+                {/* Token */}
+                <div className="text-[11px] text-surface-500 flex items-center gap-1">
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  {gitToken ? (
+                    <span className="text-accent-green flex-1">Token configured</span>
+                  ) : (
+                    <span className="text-surface-400 italic flex-1">
+                      No token (public repos only)
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowTokenInput(true);
+                      setTokenInput("");
+                    }}
+                    className="bg-transparent border-none text-brand-400 hover:text-brand-300
+                      cursor-pointer text-[11px] transition-colors duration-100 shrink-0"
+                  >
+                    {gitToken ? "change" : "add"}
+                  </button>
+                </div>
+                {showTokenInput && (
+                  <div className="flex flex-col gap-1">
+                    <input
+                      type="password"
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveToken();
+                        if (e.key === "Escape") {
+                          setShowTokenInput(false);
+                          setTokenInput("");
+                        }
+                      }}
+                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                      autoFocus
+                      className="w-full px-2 py-1 text-[11px] font-mono font-sans bg-surface-200 text-surface-800
+                        border border-surface-300/60 rounded-md outline-none
+                        focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
+                    />
+                    <div className="flex items-center justify-between">
+                      <a
+                        href="https://github.com/settings/tokens/new?scopes=repo&description=SyncDev"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-brand-400 hover:text-brand-300 no-underline hover:underline"
+                      >
+                        Generate token on GitHub
+                      </a>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            setShowTokenInput(false);
+                            setTokenInput("");
+                          }}
+                          className="px-2 py-0.5 text-[11px] bg-surface-200 text-surface-600
+                            border border-surface-300/60 rounded-md cursor-pointer hover:bg-surface-300
+                            transition-colors duration-100"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveToken}
+                          className="px-2 py-0.5 text-[11px] bg-brand-600 text-white border-none rounded-md cursor-pointer
+                            hover:bg-brand-500 transition-colors duration-100"
+                        >
+                          Save Token
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               {!showNewBranch ? (
                 <button
                   onClick={() => setShowNewBranch(true)}
-                  style={{
-                    width: "100%",
-                    padding: "3px 0",
-                    fontSize: 11,
-                    fontFamily: "system-ui, sans-serif",
-                    backgroundColor: "#2d2d2d",
-                    color: "#d4d4d4",
-                    border: "1px solid #555",
-                    borderRadius: 3,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#3c3c3c";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#2d2d2d";
-                  }}
+                  className="w-full py-1 text-[11px] font-sans bg-surface-200 text-surface-700
+                    border border-surface-300/60 rounded-md cursor-pointer hover:bg-surface-300
+                    transition-colors duration-100"
                 >
                   + New Branch
                 </button>
               ) : (
-                <div style={{ display: "flex", gap: 4 }}>
+                <div className="flex gap-1">
                   <input
                     type="text"
                     value={newBranchName}
@@ -916,29 +867,14 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                     }}
                     placeholder="Branch name"
                     autoFocus
-                    style={{
-                      flex: 1,
-                      padding: "2px 6px",
-                      fontSize: 11,
-                      fontFamily: "system-ui, sans-serif",
-                      backgroundColor: "#3c3c3c",
-                      color: "#d4d4d4",
-                      border: "1px solid #555",
-                      borderRadius: 3,
-                      outline: "none",
-                    }}
+                    className="flex-1 px-2 py-1 text-[11px] font-sans bg-surface-200 text-surface-800
+                      border border-surface-300/60 rounded-md outline-none
+                      focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
                   />
                   <button
                     onClick={handleCreateBranch}
-                    style={{
-                      padding: "2px 8px",
-                      fontSize: 11,
-                      backgroundColor: "#0e639c",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 3,
-                      cursor: "pointer",
-                    }}
+                    className="px-2 py-1 text-[11px] bg-brand-600 text-white border-none rounded-md cursor-pointer
+                      hover:bg-brand-500 transition-colors duration-100"
                   >
                     OK
                   </button>
@@ -960,43 +896,15 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
             logEntries.map((entry) => (
               <div
                 key={entry.hash}
-                style={{
-                  padding: "2px 8px 2px 20px",
-                  fontSize: 11,
-                  fontFamily:
-                    "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-                  color: "#d4d4d4",
-                  display: "flex",
-                  gap: 6,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
+                className="py-0.5 pr-2 pl-5 text-[11px] font-mono text-surface-800
+                  flex gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis"
               >
-                <span style={{ color: "#e2c08d", flexShrink: 0 }}>
-                  {entry.hash.substring(0, 7)}
-                </span>
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {entry.message}
-                </span>
+                <span className="text-accent-yellow shrink-0">{entry.hash.substring(0, 7)}</span>
+                <span className="overflow-hidden text-ellipsis">{entry.message}</span>
               </div>
             ))}
           {!logCollapsed && logEntries.length === 0 && (
-            <div
-              style={{
-                padding: "8px 20px",
-                fontSize: 11,
-                color: "#808080",
-                fontFamily: "system-ui, sans-serif",
-              }}
-            >
-              No commits yet
-            </div>
+            <div className="py-2 pl-5 text-[11px] text-surface-500 font-sans">No commits yet</div>
           )}
         </div>
       </div>

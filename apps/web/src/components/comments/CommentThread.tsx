@@ -62,148 +62,74 @@ export function CommentThread({
   );
 
   const activeComments = comments.filter((c) => !c.resolved);
+  const isValid = replyText.trim().length > 0;
 
   return (
     <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 320,
-        maxHeight: 400,
-        backgroundColor: "#252526",
-        border: "1px solid #404040",
-        borderRadius: 4,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "system-ui, sans-serif",
-        zIndex: 1000,
-        overflow: "hidden",
-      }}
+      className="absolute top-0 right-0 w-80 max-h-[400px] bg-surface-150 border border-surface-300/60
+      rounded-xl shadow-xl shadow-black/30 flex flex-col font-sans z-[1000] overflow-hidden animate-scale-in"
     >
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px",
-          borderBottom: "1px solid #404040",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{ color: "#d4d4d4", fontSize: 13, fontWeight: 500 }}>
-          Line {line} Comments
-        </span>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-surface-300/40 shrink-0">
+        <span className="text-surface-800 text-[13px] font-medium">Line {line} Comments</span>
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#808080",
-            cursor: "pointer",
-            fontSize: 16,
-            lineHeight: 1,
-            padding: "2px 4px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#d4d4d4";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#808080";
-          }}
+          className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            p-1 rounded transition-colors duration-100"
         >
-          x
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
       </div>
 
       {/* Comments list */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 8,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
         {activeComments.length === 0 && (
-          <div style={{ color: "#808080", fontSize: 12, textAlign: "center" }}>
+          <div className="text-surface-500 text-xs text-center py-2">
             No comments on this line yet.
           </div>
         )}
         {activeComments.map((comment) => (
           <div
             key={comment.id}
-            style={{
-              backgroundColor: "#1e1e1e",
-              borderRadius: 4,
-              padding: 8,
-              fontSize: 13,
-            }}
+            className="bg-surface-100 rounded-lg p-2.5 text-[13px] animate-fade-in"
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                justifyContent: "space-between",
-                marginBottom: 4,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                <span style={{ color: comment.color, fontWeight: 600 }}>
+            <div className="flex items-baseline justify-between mb-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-semibold" style={{ color: comment.color }}>
                   {comment.user}
                 </span>
-                <span style={{ color: "#6a6a6a", fontSize: 11 }}>
+                <span className="text-surface-500 text-[11px]">
                   {formatTime(comment.timestamp)}
                 </span>
               </div>
               <button
                 onClick={() => onResolve(comment.id)}
                 title="Resolve"
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#808080",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  padding: "2px 6px",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#4ec9b0";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#808080";
-                }}
+                className="bg-transparent border-none text-surface-500 hover:text-accent-green cursor-pointer
+                  text-[11px] px-1.5 py-0.5 rounded transition-colors duration-100"
               >
                 Resolve
               </button>
             </div>
-            <div
-              style={{
-                color: "#cccccc",
-                wordBreak: "break-word",
-                lineHeight: 1.4,
-              }}
-            >
-              {comment.text}
-            </div>
+            <div className="text-surface-700 break-words leading-relaxed">{comment.text}</div>
           </div>
         ))}
       </div>
 
       {/* Reply input */}
-      <div
-        style={{
-          borderTop: "1px solid #404040",
-          padding: 8,
-          display: "flex",
-          gap: 6,
-          flexShrink: 0,
-        }}
-      >
+      <div className="border-t border-surface-300/40 p-2 flex gap-1.5 shrink-0">
         <input
           type="text"
           value={replyText}
@@ -211,32 +137,19 @@ export function CommentThread({
           onKeyDown={handleKeyDown}
           placeholder="Add a comment..."
           autoFocus
-          style={{
-            flex: 1,
-            backgroundColor: "#3c3c3c",
-            border: "1px solid #555",
-            borderRadius: 4,
-            padding: "6px 10px",
-            color: "#d4d4d4",
-            fontSize: 13,
-            outline: "none",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          className="flex-1 bg-surface-200 border border-surface-300/60 rounded-lg px-3 py-1.5
+            text-surface-800 text-[13px] outline-none font-sans
+            focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
         />
         <button
           onClick={handleSubmit}
-          disabled={replyText.trim().length === 0}
-          style={{
-            backgroundColor:
-              replyText.trim().length > 0 ? "#0e639c" : "#3c3c3c",
-            color: replyText.trim().length > 0 ? "#ffffff" : "#808080",
-            border: "none",
-            borderRadius: 4,
-            padding: "6px 10px",
-            fontSize: 13,
-            cursor: replyText.trim().length > 0 ? "pointer" : "default",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          disabled={!isValid}
+          className={`rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-100
+            ${
+              isValid
+                ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
+                : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            }`}
         >
           Add
         </button>

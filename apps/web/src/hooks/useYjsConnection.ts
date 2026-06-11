@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { getCollabToken } from "@/lib/collab-token";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
@@ -19,30 +21,49 @@ export function useYjsConnection(roomId: string): YjsConnection | null {
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL
-      ?? `ws://${window.location.hostname}:4000`;
+    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? `ws://${window.location.hostname}:4000`;
     const doc = new Y.Doc();
-    const provider = new WebsocketProvider(wsUrl, roomId, doc, {
-      connect: true,
-    });
+
+    // IndexedDB persistence — survives browser restarts
+    const idbPersistence = new IndexeddbPersistence(`syncdev-${roomId}`, doc);
     const ytext = doc.getText("content");
 
-    const onStatus = ({ status: s }: { status: string }) => {
-      setStatus(s === "connected" ? "connected" : s === "connecting" ? "connecting" : "disconnected");
-    };
+    let cancelled = false;
 
-    provider.on("status", onStatus);
+    // The collab token (when auth is enabled) is fetched before connecting so
+    // it can be passed on the WebSocket upgrade as a query param.
+    void getCollabToken().then((token) => {
+      if (cancelled) {
+        idbPersistence.destroy();
+        doc.destroy();
+        return;
+      }
 
-    setConnection({ doc, provider, ytext, status: "connecting" });
+      const provider = new WebsocketProvider(wsUrl, roomId, doc, {
+        connect: true,
+        params: token ? { token } : {},
+      });
 
-    cleanupRef.current = () => {
-      provider.off("status", onStatus);
-      provider.disconnect();
-      provider.destroy();
-      doc.destroy();
-    };
+      const onStatus = ({ status: s }: { status: string }) => {
+        setStatus(
+          s === "connected" ? "connected" : s === "connecting" ? "connecting" : "disconnected",
+        );
+      };
+
+      provider.on("status", onStatus);
+      setConnection({ doc, provider, ytext, status: "connecting" });
+
+      cleanupRef.current = () => {
+        provider.off("status", onStatus);
+        provider.disconnect();
+        provider.destroy();
+        idbPersistence.destroy();
+        doc.destroy();
+      };
+    });
 
     return () => {
+      cancelled = true;
       cleanupRef.current?.();
       cleanupRef.current = null;
       setConnection(null);

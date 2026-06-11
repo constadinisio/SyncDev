@@ -10,17 +10,15 @@ export function UserList({ users }: UserListProps) {
   if (users.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className="flex gap-1.5 items-center">
       {users.map((entry) => (
         <span
           key={entry.clientId}
+          className="text-xs px-2.5 py-1 rounded-full font-medium transition-transform duration-100 hover:scale-105"
           style={{
-            fontSize: 12,
             color: entry.user.color,
-            padding: "2px 8px",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            borderRadius: 4,
-            border: `1px solid ${entry.user.color}40`,
+            backgroundColor: `${entry.user.color}15`,
+            border: `1px solid ${entry.user.color}30`,
           }}
         >
           {entry.user.name}

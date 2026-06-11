@@ -3,6 +3,7 @@ import archiver from "archiver";
 import { loadProjectTree, type TreeNode, type FolderNode } from "./file-tree.js";
 import { getOrCreateRoom } from "../rooms/room-manager.js";
 import { logError } from "../lib/logger.js";
+import { buildCorsHeaders } from "../lib/http.js";
 
 function collectFilePaths(nodes: readonly TreeNode[], prefix: string): string[] {
   const paths: string[] = [];
@@ -26,6 +27,7 @@ function getFileContent(projectId: string, filePath: string): string {
 export function handleDownloadRequest(
   res: ServerResponse,
   projectId: string,
+  origin?: string,
 ): void {
   try {
     const project = loadProjectTree(projectId);
@@ -34,9 +36,7 @@ export function handleDownloadRequest(
     res.writeHead(200, {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="${projectId}.zip"`,
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      ...buildCorsHeaders(origin),
     });
 
     const archive = archiver("zip", { zlib: { level: 9 } });
@@ -61,7 +61,7 @@ export function handleDownloadRequest(
     if (!res.headersSent) {
       res.writeHead(500, {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        ...buildCorsHeaders(origin),
       });
       res.end(JSON.stringify({ error: "Failed to create zip" }));
     }

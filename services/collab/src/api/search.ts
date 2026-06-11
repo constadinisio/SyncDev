@@ -5,6 +5,7 @@ import { loadProjectTree } from "./file-tree.js";
 import type { TreeNode } from "./file-tree.js";
 import * as Y from "yjs";
 import { log } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
 interface SearchMatch {
   readonly filePath: string;
@@ -54,32 +55,59 @@ function searchInContent(
   filePath: string,
   content: string,
   query: string,
+  isRegex: boolean,
 ): SearchMatch[] {
   const matches: SearchMatch[] = [];
-  const lowerQuery = query.toLowerCase();
   const lines = content.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const lowerLine = line.toLowerCase();
-    let searchStart = 0;
+  if (isRegex) {
+    let regex: RegExp;
+    try {
+      regex = new RegExp(query, "gi");
+    } catch {
+      return []; // Invalid regex, return no matches
+    }
 
-    while (searchStart < lowerLine.length) {
-      const matchIdx = lowerLine.indexOf(lowerQuery, searchStart);
-      if (matchIdx === -1) break;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let match: RegExpExecArray | null;
+      regex.lastIndex = 0;
 
-      matches.push({
-        filePath,
-        line: i + 1,
-        content: line.substring(0, 200), // Truncate long lines
-        matchStart: matchIdx,
-        matchEnd: Math.min(matchIdx + query.length, 200),
-      });
+      while ((match = regex.exec(line)) !== null) {
+        matches.push({
+          filePath,
+          line: i + 1,
+          content: line.substring(0, 200),
+          matchStart: match.index,
+          matchEnd: Math.min(match.index + match[0].length, 200),
+        });
 
-      searchStart = matchIdx + 1;
+        if (match[0].length === 0) regex.lastIndex++;
+        if (matches.length >= 100) return matches;
+      }
+    }
+  } else {
+    const lowerQuery = query.toLowerCase();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lowerLine = line.toLowerCase();
+      let searchStart = 0;
 
-      // Limit matches per file
-      if (matches.length >= 100) return matches;
+      while (searchStart < lowerLine.length) {
+        const matchIdx = lowerLine.indexOf(lowerQuery, searchStart);
+        if (matchIdx === -1) break;
+
+        matches.push({
+          filePath,
+          line: i + 1,
+          content: line.substring(0, 200),
+          matchStart: matchIdx,
+          matchEnd: Math.min(matchIdx + query.length, 200),
+        });
+
+        searchStart = matchIdx + 1;
+        if (matches.length >= 100) return matches;
+      }
     }
   }
 
@@ -90,9 +118,11 @@ export function handleSearchRequest(
   res: ServerResponse,
   projectId: string,
   query: string,
+  isRegex: boolean = false,
+  origin?: string,
 ): void {
   if (!query || query.length < 1) {
-    writeJson(res, 200, { matches: [] });
+    writeJson(res, 200, { matches: [] }, origin);
     return;
   }
 
@@ -105,23 +135,15 @@ export function handleSearchRequest(
     const content = getDocContent(projectId, filePath);
     if (!content) continue;
 
-    const fileMatches = searchInContent(filePath, content, query);
+    const fileMatches = searchInContent(filePath, content, query, isRegex);
     allMatches.push(...fileMatches);
 
-    // Limit total results
     if (allMatches.length >= 500) break;
   }
 
-  log("search", `found ${allMatches.length} matches for "${query}" in project "${projectId}"`);
-  writeJson(res, 200, { matches: allMatches });
-}
-
-function writeJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
+  log(
+    "search",
+    `found ${allMatches.length} matches for "${query}" (regex: ${isRegex}) in project "${projectId}"`,
+  );
+  writeJson(res, 200, { matches: allMatches }, origin);
 }

@@ -17,27 +17,31 @@ interface TerminalResult {
   readonly exitCode: number;
 }
 
-async function execGit(
-  projectId: string,
-  command: string,
-): Promise<TerminalResult> {
-  const res = await fetch(
-    `${getApiBase()}/api/terminal/${encodeURIComponent(projectId)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ command }),
-    },
-  );
+/**
+ * Sync all Yjs files to disk before git operations.
+ * This ensures git sees the latest editor content.
+ */
+async function syncToDisk(projectId: string): Promise<void> {
+  await fetch(`${getApiBase()}/api/sync/${encodeURIComponent(projectId)}`, {
+    method: "POST",
+  }).catch(() => {
+    // Non-critical — git will work with whatever is on disk
+  });
+}
+
+async function execGit(projectId: string, command: string): Promise<TerminalResult> {
+  const res = await fetch(`${getApiBase()}/api/terminal/${encodeURIComponent(projectId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command }),
+  });
   if (!res.ok) {
     throw new Error(`Terminal API error: ${res.status}`);
   }
   return res.json();
 }
 
-function parseStatusCode(
-  xy: string,
-): { status: GitFileChange["status"]; staged: boolean } | null {
+function parseStatusCode(xy: string): { status: GitFileChange["status"]; staged: boolean } | null {
   const x = xy[0]; // index (staged)
   const y = xy[1]; // work tree (unstaged)
 
@@ -84,9 +88,9 @@ function parseStatusCode(
   return null;
 }
 
-export async function gitStatus(
-  projectId: string,
-): Promise<readonly GitFileChange[]> {
+export async function gitStatus(projectId: string): Promise<readonly GitFileChange[]> {
+  // Sync editor content to disk first so git sees all changes
+  await syncToDisk(projectId);
   const result = await execGit(projectId, "git status --porcelain");
 
   if (result.exitCode !== 0) {
@@ -109,10 +113,7 @@ export async function gitStatus(
     if (!parsed) continue;
 
     // For files that have both staged and unstaged changes, emit two entries
-    if (
-      (xy[0] === "M" && xy[1] === "M") ||
-      (xy[0] === "A" && xy[1] === "M")
-    ) {
+    if ((xy[0] === "M" && xy[1] === "M") || (xy[0] === "A" && xy[1] === "M")) {
       changes.push({
         path: filePath,
         status: xy[0] === "A" ? "added" : "modified",
@@ -127,54 +128,39 @@ export async function gitStatus(
   return changes;
 }
 
-export async function gitDiff(
-  projectId: string,
-  filePath: string,
-): Promise<string> {
-  const result = await execGit(
-    projectId,
-    `git diff -- "${filePath}"`,
-  );
+export async function gitDiff(projectId: string, filePath: string): Promise<string> {
+  const result = await execGit(projectId, `git diff -- "${filePath}"`);
   // Also check staged diff if working tree diff is empty
   if (!result.stdout.trim()) {
-    const stagedResult = await execGit(
-      projectId,
-      `git diff --cached -- "${filePath}"`,
-    );
+    const stagedResult = await execGit(projectId, `git diff --cached -- "${filePath}"`);
     return stagedResult.stdout;
   }
   return result.stdout;
 }
 
-export async function gitStage(
-  projectId: string,
-  filePath: string,
-): Promise<void> {
+export async function gitStage(projectId: string, filePath: string): Promise<void> {
   const result = await execGit(projectId, `git add -- "${filePath}"`);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git add failed");
   }
 }
 
-export async function gitUnstage(
-  projectId: string,
-  filePath: string,
-): Promise<void> {
-  const result = await execGit(
-    projectId,
-    `git reset HEAD -- "${filePath}"`,
-  );
+export async function gitUnstage(projectId: string, filePath: string): Promise<void> {
+  const result = await execGit(projectId, `git reset HEAD -- "${filePath}"`);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git reset failed");
   }
 }
 
-export async function gitCommit(
-  projectId: string,
-  message: string,
-): Promise<string> {
-  // Escape double quotes in the message
-  const escaped = message.replace(/"/g, '\\"');
+export async function gitCommit(projectId: string, message: string): Promise<string> {
+  // Ensure all files are synced to disk before committing
+  await syncToDisk(projectId);
+  // Safely escape the message for shell: replace \ then " then $  then `
+  const escaped = message
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, "\\$")
+    .replace(/`/g, "\\`");
   const result = await execGit(projectId, `git commit -m "${escaped}"`);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git commit failed");
@@ -191,14 +177,8 @@ export async function gitBranch(projectId: string): Promise<string> {
   return result.stdout.trim();
 }
 
-export async function gitCreateBranch(
-  projectId: string,
-  branchName: string,
-): Promise<string> {
-  const result = await execGit(
-    projectId,
-    `git checkout -b "${branchName}"`,
-  );
+export async function gitCreateBranch(projectId: string, branchName: string): Promise<string> {
+  const result = await execGit(projectId, `git checkout -b "${branchName}"`);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git checkout -b failed");
   }
@@ -206,11 +186,25 @@ export async function gitCreateBranch(
 }
 
 export async function gitPush(projectId: string): Promise<string> {
-  const result = await execGit(projectId, "git push");
+  const result = await execGit(projectId, "git push -u origin HEAD");
   if (result.exitCode !== 0) {
-    // git push outputs to stderr even on success sometimes
     if (result.stderr.includes("Everything up-to-date")) {
       return "Everything up-to-date";
+    }
+    if (
+      result.stderr.includes("No configured push destination") ||
+      result.stderr.includes("does not appear to be a git repository")
+    ) {
+      throw new Error("No remote configured. Set a remote URL in Source Control > Branch section.");
+    }
+    if (
+      result.stderr.includes("Authentication failed") ||
+      result.stderr.includes("403") ||
+      result.stderr.includes("could not read Username")
+    ) {
+      throw new Error(
+        "Authentication failed. Check your token in Source Control > Branch > Remote Repository.",
+      );
     }
     throw new Error(result.stderr || "git push failed");
   }
@@ -218,8 +212,29 @@ export async function gitPush(projectId: string): Promise<string> {
 }
 
 export async function gitPull(projectId: string): Promise<string> {
-  const result = await execGit(projectId, "git pull");
+  const result = await execGit(projectId, "git pull --rebase origin HEAD");
   if (result.exitCode !== 0) {
+    if (
+      result.stderr.includes("no tracking information") ||
+      result.stderr.includes("does not appear to be a git repository")
+    ) {
+      throw new Error("No remote configured. Set a remote URL in Source Control > Branch section.");
+    }
+    if (
+      result.stderr.includes("Authentication failed") ||
+      result.stderr.includes("403") ||
+      result.stderr.includes("could not read Username")
+    ) {
+      throw new Error(
+        "Authentication failed. Check your token in Source Control > Branch > Remote Repository.",
+      );
+    }
+    if (
+      result.stderr.includes("Couldn't find remote ref") ||
+      result.stdout.includes("Already up to date")
+    ) {
+      return "Already up to date.";
+    }
     throw new Error(result.stderr || "git pull failed");
   }
   return result.stdout || "Already up to date.";
@@ -229,10 +244,7 @@ export async function gitLog(
   projectId: string,
   limit: number = 20,
 ): Promise<readonly GitLogEntry[]> {
-  const result = await execGit(
-    projectId,
-    `git log --oneline -n ${limit}`,
-  );
+  const result = await execGit(projectId, `git log --oneline -n ${limit}`);
   if (result.exitCode !== 0) {
     return [];
   }
@@ -252,20 +264,11 @@ export async function gitLog(
     });
 }
 
-export async function gitDiscard(
-  projectId: string,
-  filePath: string,
-): Promise<void> {
-  const result = await execGit(
-    projectId,
-    `git checkout -- "${filePath}"`,
-  );
+export async function gitDiscard(projectId: string, filePath: string): Promise<void> {
+  const result = await execGit(projectId, `git checkout -- "${filePath}"`);
   if (result.exitCode !== 0) {
     // If untracked file, try removing it
-    const rmResult = await execGit(
-      projectId,
-      `git clean -f -- "${filePath}"`,
-    );
+    const rmResult = await execGit(projectId, `git clean -f -- "${filePath}"`);
     if (rmResult.exitCode !== 0) {
       throw new Error(rmResult.stderr || "Failed to discard changes");
     }
@@ -277,6 +280,37 @@ export async function gitInit(projectId: string): Promise<string> {
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git init failed");
   }
+  // Auto-configure user if not set globally
+  await execGit(projectId, 'git config user.name "SyncDev User" 2>/dev/null || true');
+  await execGit(projectId, 'git config user.email "user@syncdev.local" 2>/dev/null || true');
+  return result.stdout;
+}
+
+export async function gitRemoteGet(projectId: string): Promise<string> {
+  const result = await execGit(projectId, "git config --get remote.origin.url");
+  if (result.exitCode !== 0) return "";
+  return result.stdout.trim();
+}
+
+export async function gitRemoteSet(projectId: string, url: string): Promise<void> {
+  // Try to set existing remote, if not create it
+  const existing = await gitRemoteGet(projectId);
+  const command = existing
+    ? `git remote set-url origin "${url}"`
+    : `git remote add origin "${url}"`;
+  const result = await execGit(projectId, command);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || "Failed to set remote");
+  }
+}
+
+export async function gitShowFile(
+  projectId: string,
+  filePath: string,
+  ref: string = "HEAD",
+): Promise<string> {
+  const result = await execGit(projectId, `git show ${ref}:"${filePath}"`);
+  if (result.exitCode !== 0) return "";
   return result.stdout;
 }
 

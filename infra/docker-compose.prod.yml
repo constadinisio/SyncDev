@@ -1,0 +1,111 @@
+# Production deployment for a single VPS.
+#
+#   1. Copy infra/.env.example to infra/.env and fill in the values.
+#   2. Point your domain's DNS A/AAAA record at the server.
+#   3. docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Caddy terminates TLS (automatic Let's Encrypt) and is the only service
+# exposed to the internet. web and collab stay on the internal network.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - SYNCDEV_DOMAIN=${SYNCDEV_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_started
+      collab:
+        condition: service_healthy
+    networks:
+      - collab-net
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://${SYNCDEV_DOMAIN}
+        - NEXT_PUBLIC_COLLAB_WS_URL=wss://${SYNCDEV_DOMAIN}
+        - NEXT_PUBLIC_AUTH_ENABLED=true
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - AUTH_ENABLED=true
+      - NEXT_PUBLIC_AUTH_ENABLED=true
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
+      - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}
+      - COLLAB_JWT_SECRET=${COLLAB_JWT_SECRET}
+    depends_on:
+      collab:
+        condition: service_healthy
+    networks:
+      - collab-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  collab:
+    build:
+      context: ..
+      dockerfile: services/collab/Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - ALLOWED_ORIGINS=https://${SYNCDEV_DOMAIN}
+      - COLLAB_JWT_SECRET=${COLLAB_JWT_SECRET}
+      - SNAPSHOT_DIR=/data/snapshots
+      # Terminal sandbox: run user commands in sibling Docker containers.
+      - TERMINAL_SANDBOX_DOCKER=true
+      - TERMINAL_WORKSPACE_DIR=/data/workspaces
+      - SANDBOX_IMAGE=node:20-bookworm-slim
+      # Host path of the workspaces volume, so sibling-container bind mounts
+      # resolve on the host. MUST match the host side of the volume below.
+      - SANDBOX_HOST_WORKSPACE_BASE=${SYNCDEV_DATA_DIR}/workspaces
+    volumes:
+      - ${SYNCDEV_DATA_DIR}/snapshots:/data/snapshots
+      - ${SYNCDEV_DATA_DIR}/workspaces:/data/workspaces
+      # Access to the host Docker daemon for the terminal sandbox.
+      # SECURITY: this is equivalent to host root. See DEPLOYMENT.md.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - collab-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  collab-net:
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:

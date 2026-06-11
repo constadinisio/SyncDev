@@ -9,11 +9,7 @@ import type { Room } from "../types/index.js";
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
 
-export function handleMessage(
-  room: Room,
-  ws: WebSocket,
-  data: Uint8Array,
-): void {
+export function handleMessage(room: Room, ws: WebSocket, data: Uint8Array): void {
   const decoder = decoding.createDecoder(data);
   const messageType = decoding.readVarUint(decoder);
 
@@ -52,10 +48,7 @@ export function sendAwarenessState(room: Room, ws: WebSocket): void {
     encoding.writeVarUint(encoder, MESSAGE_AWARENESS);
     encoding.writeVarUint8Array(
       encoder,
-      awarenessProtocol.encodeAwarenessUpdate(
-        room.awareness,
-        Array.from(states.keys()),
-      ),
+      awarenessProtocol.encodeAwarenessUpdate(room.awareness, Array.from(states.keys())),
     );
     ws.send(encoding.toUint8Array(encoder));
   }

@@ -9,7 +9,7 @@ import { MonacoBinding } from "y-monaco";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
-interface CollaborativeEditorProps {
+export interface CollaborativeEditorProps {
   readonly ytext: Y.Text;
   readonly provider: WebsocketProvider;
   readonly language?: string;
@@ -63,10 +63,7 @@ export function CollaborativeEditor({
       });
     });
 
-    decorationsRef.current = editor.deltaDecorations(
-      decorationsRef.current,
-      newDecorations,
-    );
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
   };
 
   const handleEditorWillMount: BeforeMount = (monacoInstance) => {
@@ -109,12 +106,7 @@ export function CollaborativeEditor({
     const model = editor.getModel();
     if (!model) return;
 
-    bindingRef.current = new MonacoBinding(
-      ytext,
-      model,
-      new Set([editor]),
-      provider.awareness,
-    );
+    bindingRef.current = new MonacoBinding(ytext, model, new Set([editor]), provider.awareness);
 
     editor.onDidChangeCursorPosition((e) => {
       onCursorChange?.(e.position.lineNumber, e.position.column);
@@ -188,7 +180,7 @@ export function CollaborativeEditor({
   const editorFontSize = settings?.fontSize ?? 14;
   const editorTabSize = settings?.tabSize ?? 2;
   const editorMinimap = settings?.minimap ?? true;
-  const editorWordWrap = settings?.wordWrap ? "on" as const : "off" as const;
+  const editorWordWrap = settings?.wordWrap ? ("on" as const) : ("off" as const);
   const editorLineNumbers = (settings?.lineNumbers ?? "on") as "on" | "off" | "relative";
 
   return (

@@ -7,34 +7,56 @@ import {
   moveNode,
   listProjects,
 } from "./file-tree.js";
-import {
-  handlePreviewRequest,
-  handlePreviewEvents,
-} from "./preview.js";
+import { handlePreviewRequest, handlePreviewEvents } from "./preview.js";
 import { handleSearchRequest } from "./search.js";
 import { handleTerminalRequest } from "./terminal.js";
 import { handleHistoryRequest } from "./history.js";
 import { handleDownloadRequest } from "./download.js";
 import { handleUploadRequest } from "./upload.js";
 import { handleScanRequest } from "./scan.js";
+import { handleCloneRequest } from "./clone.js";
+import { handleAssetRequest } from "./assets.js";
+import { handleReplaceRequest } from "./replace.js";
+import { handleSyncRequest } from "./sync.js";
 import { logError } from "../lib/logger.js";
+import { loadConfig } from "../lib/config.js";
+import { buildCorsHeaders, writeJson } from "../lib/http.js";
+import { isServerReady } from "../lib/readiness.js";
+import { RateLimiter, getClientIp } from "../lib/rate-limit.js";
+import { authenticate, AuthRequiredError, type AuthUser } from "../lib/auth.js";
+import {
+  ensureProjectAccess,
+  filterAccessibleProjects,
+  ForbiddenError,
+} from "../lib/memberships.js";
+import {
+  ValidationError,
+  parseJson,
+  parseValue,
+  projectIdSchema,
+  createProjectSchema,
+  createNodeSchema,
+  deleteNodeSchema,
+  moveNodeSchema,
+  renameNodeSchema,
+  terminalSchema,
+  cloneSchema,
+} from "../lib/validation.js";
 
-function json(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
-}
+const config = loadConfig();
 
-function cors(res: ServerResponse): void {
-  res.writeHead(204, {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
+// Rate limiter for resource-heavy / abusable endpoints.
+const sensitiveLimiter = new RateLimiter({
+  windowMs: config.rateLimitWindowMs,
+  max: config.rateLimitMax,
+});
+const SENSITIVE_ROUTE = /^\/api\/(terminal|clone|upload|scan)\//;
+
+// Periodically reclaim memory from expired rate-limit buckets.
+setInterval(() => sensitiveLimiter.sweep(Date.now()), 60_000).unref();
+
+function writeCors(res: ServerResponse, origin: string | undefined): void {
+  res.writeHead(204, buildCorsHeaders(origin));
   res.end();
 }
 
@@ -53,15 +75,90 @@ export async function handleApiRequest(
 ): Promise<boolean> {
   const url = req.url ?? "";
   const method = req.method ?? "GET";
+  const origin = req.headers.origin;
+
+  // Local helpers that carry the request's Origin into the CORS headers, so
+  // every existing json()/cors() call site stays unchanged.
+  const json = (res2: ServerResponse, status: number, data: unknown): void =>
+    writeJson(res2, status, data, origin);
+  const cors = (res2: ServerResponse): void => writeCors(res2, origin);
+
+  // Maps validation failures to 400, forbidden to 403, everything else to 500.
+  const fail = (err: unknown, message: string): void => {
+    if (err instanceof ValidationError) {
+      json(res, 400, { error: err.message });
+      return;
+    }
+    if (err instanceof ForbiddenError) {
+      json(res, 403, { error: err.message });
+      return;
+    }
+    logError("api", message, err);
+    json(res, 500, { error: "internal error" });
+  };
 
   if (method === "OPTIONS") {
     cors(res);
     return true;
   }
 
-  // GET /api/projects — list all projects
+  // Throttle resource-heavy endpoints per client IP.
+  if (SENSITIVE_ROUTE.test(url)) {
+    const { allowed, resetAt } = sensitiveLimiter.hit(getClientIp(req), Date.now());
+    if (!allowed) {
+      const retryAfter = Math.max(0, Math.ceil((resetAt - Date.now()) / 1000));
+      json(res, 429, { error: "rate limit exceeded", retryAfter });
+      return true;
+    }
+  }
+
+  // GET /health — liveness probe (process is up)
+  if (url === "/health" && method === "GET") {
+    json(res, 200, { status: "ok" });
+    return true;
+  }
+
+  // GET /ready — readiness probe (dependencies initialized)
+  if (url === "/ready" && method === "GET") {
+    const ready = isServerReady();
+    json(res, ready ? 200 : 503, {
+      status: ready ? "ready" : "starting",
+    });
+    return true;
+  }
+
+  // Authenticate the request. In enforced mode a missing/invalid token is 401;
+  // otherwise (dev open mode) `user` is null and access proceeds.
+  let user: AuthUser | null;
+  try {
+    user = await authenticate(req);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) {
+      json(res, 401, { error: "unauthorized" });
+      return true;
+    }
+    throw err;
+  }
+
+  // Per-project authorization. Returns false (and responds 403) when the
+  // authenticated user may not access the project; claims ownership on first
+  // access. No-op in dev open mode.
+  const authorize = (pid: string): boolean => {
+    try {
+      ensureProjectAccess(pid, user);
+      return true;
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        json(res, 403, { error: "forbidden" });
+        return false;
+      }
+      throw err;
+    }
+  };
+
+  // GET /api/projects — list all projects (filtered to the user's projects)
   if (url === "/api/projects" && method === "GET") {
-    const projects = listProjects();
+    const projects = filterAccessibleProjects(listProjects(), user);
     json(res, 200, { projects });
     return true;
   }
@@ -69,17 +166,12 @@ export async function handleApiRequest(
   // POST /api/projects — create a project
   if (url === "/api/projects" && method === "POST") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const projectId = body.projectId as string;
-      if (!projectId) {
-        json(res, 400, { error: "projectId is required" });
-        return true;
-      }
+      const { projectId } = parseJson(createProjectSchema, await readBody(req));
+      if (!authorize(projectId)) return true;
       const tree = loadProjectTree(projectId);
       json(res, 201, tree);
     } catch (err) {
-      logError("api", "failed to create project", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to create project");
     }
     return true;
   }
@@ -88,7 +180,8 @@ export async function handleApiRequest(
   const sseMatch = url.match(/^\/preview-events\/([^/?]+)/);
   if (sseMatch && method === "GET") {
     const pid = decodeURIComponent(sseMatch[1]);
-    handlePreviewEvents(req, res, pid);
+    if (!authorize(pid)) return true;
+    handlePreviewEvents(req, res, pid, origin);
     return true;
   }
 
@@ -96,8 +189,9 @@ export async function handleApiRequest(
   const previewMatch = url.match(/^\/preview\/([^/]+)\/(.+)/);
   if (previewMatch && method === "GET") {
     const pid = decodeURIComponent(previewMatch[1]);
+    if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(previewMatch[2]);
-    handlePreviewRequest(req, res, pid, filePath);
+    handlePreviewRequest(req, res, pid, filePath, origin);
     return true;
   }
 
@@ -105,23 +199,24 @@ export async function handleApiRequest(
   const searchMatch = url.match(/^\/api\/search\/([^/?]+)/);
   if (searchMatch && method === "GET") {
     const pid = decodeURIComponent(searchMatch[1]);
+    if (!authorize(pid)) return true;
     const urlObj = new URL(url, "http://localhost");
     const query = urlObj.searchParams.get("q") ?? "";
-    handleSearchRequest(res, pid, query);
+    const isRegex = urlObj.searchParams.get("regex") === "1";
+    handleSearchRequest(res, pid, query, isRegex, origin);
     return true;
   }
 
   // POST /api/terminal/:projectId — execute a command
   const terminalMatch = url.match(/^\/api\/terminal\/([^/?]+)/);
   if (terminalMatch && method === "POST") {
-    const pid = decodeURIComponent(terminalMatch[1]);
     try {
-      const body = JSON.parse(await readBody(req));
-      const { command } = body as { command: string };
-      await handleTerminalRequest(res, pid, command);
+      const pid = parseValue(projectIdSchema, decodeURIComponent(terminalMatch[1]));
+      if (!authorize(pid)) return true;
+      const { command } = parseJson(terminalSchema, await readBody(req));
+      await handleTerminalRequest(res, pid, command, origin);
     } catch (err) {
-      logError("api", "failed to execute terminal command", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to execute terminal command");
     }
     return true;
   }
@@ -130,8 +225,9 @@ export async function handleApiRequest(
   const historyMatch = url.match(/^\/api\/history\/([^/]+)\/(.+)/);
   if (historyMatch && method === "GET") {
     const pid = decodeURIComponent(historyMatch[1]);
+    if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(historyMatch[2]);
-    handleHistoryRequest(res, pid, filePath);
+    handleHistoryRequest(res, pid, filePath, origin);
     return true;
   }
 
@@ -139,7 +235,8 @@ export async function handleApiRequest(
   const downloadMatch = url.match(/^\/api\/download\/([^/?]+)/);
   if (downloadMatch && method === "GET") {
     const pid = decodeURIComponent(downloadMatch[1]);
-    handleDownloadRequest(res, pid);
+    if (!authorize(pid)) return true;
+    handleDownloadRequest(res, pid, origin);
     return true;
   }
 
@@ -147,8 +244,9 @@ export async function handleApiRequest(
   const scanMatch = url.match(/^\/api\/scan\/([^/?]+)/);
   if (scanMatch && method === "POST") {
     const pid = decodeURIComponent(scanMatch[1]);
+    if (!authorize(pid)) return true;
     try {
-      handleScanRequest(res, pid);
+      handleScanRequest(res, pid, origin);
     } catch (err) {
       logError("api", "failed to scan workspace", err);
       json(res, 500, { error: "internal error" });
@@ -160,9 +258,10 @@ export async function handleApiRequest(
   const uploadMatch = url.match(/^\/api\/upload\/([^/?]+)/);
   if (uploadMatch && method === "POST") {
     const pid = decodeURIComponent(uploadMatch[1]);
+    if (!authorize(pid)) return true;
     try {
       const body = await readBody(req);
-      handleUploadRequest(res, pid, body);
+      handleUploadRequest(res, pid, body, origin);
     } catch (err) {
       logError("api", "failed to handle upload", err);
       json(res, 500, { error: "internal error" });
@@ -170,11 +269,64 @@ export async function handleApiRequest(
     return true;
   }
 
+  // POST /api/sync/:projectId — sync all Yjs files to disk (for git)
+  const syncMatch = url.match(/^\/api\/sync\/([^/?]+)/);
+  if (syncMatch && method === "POST") {
+    const pid = decodeURIComponent(syncMatch[1]);
+    if (!authorize(pid)) return true;
+    handleSyncRequest(res, pid, origin);
+    return true;
+  }
+
+  // POST /api/replace/:projectId — find and replace across files
+  const replaceMatch = url.match(/^\/api\/replace\/([^/?]+)/);
+  if (replaceMatch && method === "POST") {
+    const pid = decodeURIComponent(replaceMatch[1]);
+    if (!authorize(pid)) return true;
+    const urlObj = new URL(url, "http://localhost");
+    const query = urlObj.searchParams.get("q") ?? "";
+    const replacement = urlObj.searchParams.get("replace") ?? "";
+    const isRegex = urlObj.searchParams.get("regex") === "1";
+    handleReplaceRequest(res, pid, query, replacement, isRegex, origin);
+    return true;
+  }
+
+  // POST /api/clone/:projectId — clone a git repository
+  const cloneMatch = url.match(/^\/api\/clone\/([^/?]+)/);
+  if (cloneMatch && method === "POST") {
+    try {
+      const pid = parseValue(projectIdSchema, decodeURIComponent(cloneMatch[1]));
+      if (!authorize(pid)) return true;
+      const { repoUrl } = parseJson(cloneSchema, await readBody(req));
+      await handleCloneRequest(res, pid, repoUrl, origin);
+    } catch (err) {
+      fail(err, "failed to clone repository");
+    }
+    return true;
+  }
+
+  // GET /api/assets/:projectId/:filePath — serve binary/image files from workspace
+  const assetMatch = url.match(/^\/api\/assets\/([^/]+)\/(.+)/);
+  if (assetMatch && method === "GET") {
+    const pid = decodeURIComponent(assetMatch[1]);
+    if (!authorize(pid)) return true;
+    const filePath = decodeURIComponent(assetMatch[2]);
+    handleAssetRequest(res, pid, filePath, origin);
+    return true;
+  }
+
   // Match /api/files/<projectId>
   const filesMatch = url.match(/^\/api\/files\/([^/?]+)/);
   if (!filesMatch) return false;
 
-  const projectId = decodeURIComponent(filesMatch[1]);
+  let projectId: string;
+  try {
+    projectId = parseValue(projectIdSchema, decodeURIComponent(filesMatch[1]));
+  } catch (err) {
+    fail(err, "invalid projectId");
+    return true;
+  }
+  if (!authorize(projectId)) return true;
 
   // GET /api/files/:projectId — get file tree
   if (method === "GET") {
@@ -186,17 +338,11 @@ export async function handleApiRequest(
   // POST /api/files/:projectId — create file or folder
   if (method === "POST") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path, type } = body as { path: string; type: "file" | "folder" };
-      if (!path || !type) {
-        json(res, 400, { error: "path and type are required" });
-        return true;
-      }
+      const { path, type } = parseJson(createNodeSchema, await readBody(req));
       const updated = createNode(projectId, path, type);
       json(res, 201, updated);
     } catch (err) {
-      logError("api", "failed to create node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to create node");
     }
     return true;
   }
@@ -204,17 +350,11 @@ export async function handleApiRequest(
   // DELETE /api/files/:projectId — delete file or folder
   if (method === "DELETE") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path } = body as { path: string };
-      if (!path) {
-        json(res, 400, { error: "path is required" });
-        return true;
-      }
+      const { path } = parseJson(deleteNodeSchema, await readBody(req));
       const updated = deleteNode(projectId, path);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to delete node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to delete node");
     }
     return true;
   }
@@ -222,20 +362,11 @@ export async function handleApiRequest(
   // PUT /api/files/:projectId — move file or folder
   if (method === "PUT") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { sourcePath, targetPath } = body as {
-        sourcePath: string;
-        targetPath: string;
-      };
-      if (!sourcePath || targetPath === undefined) {
-        json(res, 400, { error: "sourcePath and targetPath are required" });
-        return true;
-      }
+      const { sourcePath, targetPath } = parseJson(moveNodeSchema, await readBody(req));
       const updated = moveNode(projectId, sourcePath, targetPath);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to move node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to move node");
     }
     return true;
   }
@@ -243,17 +374,11 @@ export async function handleApiRequest(
   // PATCH /api/files/:projectId — rename file or folder
   if (method === "PATCH") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path, newName } = body as { path: string; newName: string };
-      if (!path || !newName) {
-        json(res, 400, { error: "path and newName are required" });
-        return true;
-      }
+      const { path, newName } = parseJson(renameNodeSchema, await readBody(req));
       const updated = renameNode(projectId, path, newName);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to rename node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to rename node");
     }
     return true;
   }

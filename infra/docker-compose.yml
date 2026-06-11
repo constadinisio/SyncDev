@@ -3,33 +3,63 @@ version: "3.8"
 services:
   web:
     build:
-      context: ../apps/web
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: apps/web/Dockerfile
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_COLLAB_WS_URL=ws://localhost:4000
     depends_on:
-      - collab
+      collab:
+        condition: service_healthy
     networks:
       - collab-net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   collab:
     build:
-      context: ../services/collab
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: services/collab/Dockerfile
     ports:
       - "4000:4000"
     environment:
+      - NODE_ENV=production
       - PORT=4000
       - SNAPSHOT_DIR=/data/snapshots
       - SNAPSHOT_DEBOUNCE_MS=2000
       - SNAPSHOT_INTERVAL_MS=30000
       - ROOM_GRACE_PERIOD_MS=30000
+      # Comma-separated browser origins allowed to call the API/WS. Required in production.
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     volumes:
       - snapshot-data:/data/snapshots
     networks:
       - collab-net
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 networks:
   collab-net:

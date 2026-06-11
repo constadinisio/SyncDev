@@ -1,0 +1,30 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt) for SyncDev.
+# Replace ${SYNCDEV_DOMAIN} via the env var in docker-compose.prod.yml.
+#
+# Routing:
+#   - /api/*, /preview*, WebSocket upgrades  -> collab service (:4000)
+#   - everything else                        -> web (Next.js, :3000)
+
+{$SYNCDEV_DOMAIN} {
+	encode gzip zstd
+
+	# Collab REST API and SSE preview endpoints.
+	@collab path /api/* /preview/* /preview-events/* /health /ready
+	handle @collab {
+		reverse_proxy collab:4000
+	}
+
+	# WebSocket connections (Yjs) — any upgrade request goes to collab.
+	@ws {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	handle @ws {
+		reverse_proxy collab:4000
+	}
+
+	# Everything else is the Next.js app.
+	handle {
+		reverse_proxy web:3000
+	}
+}

@@ -85,9 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
     description: "Full-stack React framework with TypeScript and Tailwind",
     tags: ["React", "TypeScript", "Tailwind"],
     commands: [
-      "npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm",
+      'npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm',
     ],
-    postMessage: "Your Next.js project is ready. Run 'npm run dev' in the terminal to start the dev server.",
+    postMessage:
+      "Your Next.js project is ready. Run 'npm run dev' in the terminal to start the dev server.",
   },
   {
     id: "react-vite",
@@ -95,10 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     icon: "⚛",
     description: "Fast React setup with Vite and TypeScript",
     tags: ["React", "TypeScript", "Vite"],
-    commands: [
-      "npm create vite@latest . -- --template react-ts",
-      "npm install",
-    ],
+    commands: ["npm create vite@latest . -- --template react-ts", "npm install"],
     postMessage: "Your React + Vite project is ready. Run 'npm run dev' in the terminal to start.",
   },
   {
@@ -196,7 +194,8 @@ uvicorn>=0.24.0
 `,
       },
     ],
-    postMessage: "Your Python project is ready. Run 'pip install -r requirements.txt' then 'python main.py'.",
+    postMessage:
+      "Your Python project is ready. Run 'pip install -r requirements.txt' then 'python main.py'.",
   },
   {
     id: "static-site",
@@ -313,13 +312,41 @@ document.addEventListener('DOMContentLoaded', () => {
 ];
 
 const ADJECTIVES = [
-  "swift", "bright", "cool", "bold", "calm", "keen", "neat", "warm",
-  "fair", "pure", "sage", "wise", "glad", "able", "true", "kind",
+  "swift",
+  "bright",
+  "cool",
+  "bold",
+  "calm",
+  "keen",
+  "neat",
+  "warm",
+  "fair",
+  "pure",
+  "sage",
+  "wise",
+  "glad",
+  "able",
+  "true",
+  "kind",
 ];
 
 const NOUNS = [
-  "fox", "owl", "elk", "jay", "bee", "oak", "gem", "star",
-  "wave", "leaf", "dawn", "dusk", "peak", "vale", "reef", "cove",
+  "fox",
+  "owl",
+  "elk",
+  "jay",
+  "bee",
+  "oak",
+  "gem",
+  "star",
+  "wave",
+  "leaf",
+  "dawn",
+  "dusk",
+  "peak",
+  "vale",
+  "reef",
+  "cove",
 ];
 
 export function generateProjectName(): string {

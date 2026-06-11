@@ -68,10 +68,7 @@ export function CommentGutter({
     (line: number, text: string) => {
       const yarray = doc.getArray<Y.Map<unknown>>("comments");
       const ymap = new Y.Map<unknown>();
-      ymap.set(
-        "id",
-        `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      );
+      ymap.set("id", `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
       ymap.set("line", line);
       ymap.set("user", userName);
       ymap.set("color", userColor);
@@ -105,9 +102,7 @@ export function CommentGutter({
 
   if (activeLine === null) return null;
 
-  const lineComments = comments.filter(
-    (c) => c.line === activeLine && !c.resolved,
-  );
+  const lineComments = comments.filter((c) => c.line === activeLine && !c.resolved);
 
   return (
     <div
