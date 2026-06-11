@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@sentry/node": "^10.57.0",
     "archiver": "^7.0.1",
     "jose": "^6.2.3",
     "lib0": "^0.2.97",

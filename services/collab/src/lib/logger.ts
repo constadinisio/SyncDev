@@ -1,5 +1,6 @@
 import pino from "pino";
 import { loadConfig } from "./config.js";
+import { captureError } from "./sentry.js";
 
 const config = loadConfig();
 
@@ -42,5 +43,9 @@ export function logError(context: string, message: string, error?: unknown): voi
     logger.error({ context, err: error }, message);
   } else {
     logger.error({ context }, message);
+  }
+  // Forward to Sentry (no-op when disabled).
+  if (error !== undefined) {
+    captureError(error, { context, message });
   }
 }

@@ -6,6 +6,7 @@ import { initRoomManager, shutdownRoomManager } from "./rooms/room-manager.js";
 import { loadConfig, type AppConfig } from "./lib/config.js";
 import { markReady, markNotReady } from "./lib/readiness.js";
 import { checkDockerAvailable } from "./lib/sandbox.js";
+import { initSentry } from "./lib/sentry.js";
 import { log, logError } from "./lib/logger.js";
 
 // Validate configuration before anything else: fail fast on misconfiguration.
@@ -16,6 +17,9 @@ try {
   logError("server", "configuration error, refusing to start", err);
   process.exit(1);
 }
+
+// Initialize error tracking as early as possible (no-op without SENTRY_DSN).
+initSentry();
 
 const httpServer = createServer(async (req, res) => {
   const handled = await handleApiRequest(req, res);

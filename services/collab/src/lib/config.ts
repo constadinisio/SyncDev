@@ -32,6 +32,8 @@ export interface AppConfig {
   readonly collabJwtSecret: string | undefined;
   /** Terminal command isolation. */
   readonly terminal: TerminalSandboxConfig;
+  /** Sentry DSN for error tracking. Undefined disables Sentry. */
+  readonly sentryDsn: string | undefined;
 }
 
 export interface TerminalSandboxConfig {
@@ -153,6 +155,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       network: env.SANDBOX_NETWORK ?? "bridge",
       hostWorkspaceBase: env.SANDBOX_HOST_WORKSPACE_BASE?.trim() ?? "",
     }),
+    sentryDsn: env.SENTRY_DSN?.trim() || undefined,
   });
 
   cached = resolved;
