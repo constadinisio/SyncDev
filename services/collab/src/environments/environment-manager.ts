@@ -140,7 +140,11 @@ export class EnvironmentManager {
     if (running.length < this.deps.limits.maxActive) return;
     // Evict the least-recently-active environment.
     const victim = running.sort((a, b) => a.lastActivity - b.lastActivity)[0];
-    if (victim) void this.stop(victim.projectId, true);
+    if (victim) {
+      void this.stop(victim.projectId, true).catch((err) =>
+        logError("env", `eviction of "${victim.projectId}" failed`, err),
+      );
+    }
   }
 
   async stop(projectId: string, remove = false): Promise<void> {
