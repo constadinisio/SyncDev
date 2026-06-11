@@ -2,10 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import type { IncomingMessage, ServerResponse } from "http";
 import { join } from "path";
 import { getEnvironmentManager } from "../environments/environment-manager-instance.js";
-import {
-  addEnvironmentEventClient,
-  removeEnvironmentEventClient,
-} from "../environments/events.js";
+import { addEnvironmentEventClient, removeEnvironmentEventClient } from "../environments/events.js";
 import { buildCorsHeaders, writeJson } from "../lib/http.js";
 import { loadConfig } from "../lib/config.js";
 import { logError } from "../lib/logger.js";

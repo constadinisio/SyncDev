@@ -172,8 +172,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     environments: Object.freeze({
       enabled: parseBoolean("ENVIRONMENTS_ENABLED", env.ENVIRONMENTS_ENABLED, isProduction),
       defaultImage:
-        env.DEVCONTAINER_DEFAULT_IMAGE ??
-        "mcr.microsoft.com/devcontainers/javascript-node:20",
+        env.DEVCONTAINER_DEFAULT_IMAGE ?? "mcr.microsoft.com/devcontainers/javascript-node:20",
       maxActive: parseInteger("MAX_ACTIVE_ENVIRONMENTS", env.MAX_ACTIVE_ENVIRONMENTS, 5),
       idleMs: parseInteger("ENV_IDLE_MS", env.ENV_IDLE_MS, 600_000),
     }),

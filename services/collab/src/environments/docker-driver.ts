@@ -35,7 +35,7 @@ function docker(args: string[], timeoutMs: number): Promise<ExecResult> {
           stderr: truncate(stderr ?? ""),
           exitCode:
             typeof (error as { code?: unknown } | null)?.code === "number"
-              ? ((error as { code: number }).code)
+              ? (error as { code: number }).code
               : 0,
         });
       },
@@ -102,10 +102,9 @@ export function createDockerDriver(): DockerDriver {
       );
     },
     async inspect(name) {
-      const res = await docker(
-        ["inspect", "-f", "{{.State.Running}}", name],
-        10_000,
-      ).catch(() => ({ stdout: "", stderr: "", exitCode: 1 }) as ExecResult);
+      const res = await docker(["inspect", "-f", "{{.State.Running}}", name], 10_000).catch(
+        () => ({ stdout: "", stderr: "", exitCode: 1 }) as ExecResult,
+      );
       if (res.exitCode !== 0) return { exists: false, running: false };
       return { exists: true, running: res.stdout.trim() === "true" };
     },

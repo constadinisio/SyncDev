@@ -48,7 +48,11 @@ describe("EnvironmentManager.ensureRunning", () => {
     expect(state.setupFailed).toBe(false);
     expect(driver.pull).toHaveBeenCalledWith("node:20");
     expect(driver.run).toHaveBeenCalledOnce();
-    expect(driver.exec).toHaveBeenCalledWith("syncdev-env-proj-1", "npm install", expect.any(Number));
+    expect(driver.exec).toHaveBeenCalledWith(
+      "syncdev-env-proj-1",
+      "npm install",
+      expect.any(Number),
+    );
   });
 
   it("is idempotent when already running", async () => {

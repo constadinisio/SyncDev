@@ -61,7 +61,11 @@ export class EnvironmentManager {
   private setStatus(state: EnvironmentState, status: EnvironmentState["status"]): void {
     state.status = status;
     state.lastActivity = this.now();
-    this.deps.onEvent?.(state.projectId, { type: "status", status, setupFailed: state.setupFailed });
+    this.deps.onEvent?.(state.projectId, {
+      type: "status",
+      status,
+      setupFailed: state.setupFailed,
+    });
   }
 
   ensureRunning(projectId: string): Promise<EnvironmentState> {

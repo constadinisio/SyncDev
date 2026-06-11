@@ -18,7 +18,12 @@ import { handleCloneRequest } from "./clone.js";
 import { handleAssetRequest } from "./assets.js";
 import { handleReplaceRequest } from "./replace.js";
 import { handleSyncRequest } from "./sync.js";
-import { handleEnvStatus, handleEnvAction, handleEnvEvents, handleEnvScaffold } from "./environments.js";
+import {
+  handleEnvStatus,
+  handleEnvAction,
+  handleEnvEvents,
+  handleEnvScaffold,
+} from "./environments.js";
 import { logError } from "../lib/logger.js";
 import { loadConfig } from "../lib/config.js";
 import { buildCorsHeaders, writeJson } from "../lib/http.js";
