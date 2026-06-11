@@ -25,6 +25,12 @@ import { logError } from "../lib/logger.js";
 import { loadConfig, isOriginAllowed } from "../lib/config.js";
 import { isServerReady } from "../lib/readiness.js";
 import { RateLimiter, getClientIp } from "../lib/rate-limit.js";
+import { authenticate, AuthRequiredError, type AuthUser } from "../lib/auth.js";
+import {
+  ensureProjectAccess,
+  filterAccessibleProjects,
+  ForbiddenError,
+} from "../lib/memberships.js";
 import {
   ValidationError,
   parseJson,
@@ -110,10 +116,14 @@ export async function handleApiRequest(
     writeJson(res2, status, data, origin);
   const cors = (res2: ServerResponse): void => writeCors(res2, origin);
 
-  // Maps validation failures to 400 and everything else to a 500 (logged).
+  // Maps validation failures to 400, forbidden to 403, everything else to 500.
   const fail = (err: unknown, message: string): void => {
     if (err instanceof ValidationError) {
       json(res, 400, { error: err.message });
+      return;
+    }
+    if (err instanceof ForbiddenError) {
+      json(res, 403, { error: err.message });
       return;
     }
     logError("api", message, err);
@@ -150,9 +160,38 @@ export async function handleApiRequest(
     return true;
   }
 
-  // GET /api/projects — list all projects
+  // Authenticate the request. In enforced mode a missing/invalid token is 401;
+  // otherwise (dev open mode) `user` is null and access proceeds.
+  let user: AuthUser | null;
+  try {
+    user = await authenticate(req);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) {
+      json(res, 401, { error: "unauthorized" });
+      return true;
+    }
+    throw err;
+  }
+
+  // Per-project authorization. Returns false (and responds 403) when the
+  // authenticated user may not access the project; claims ownership on first
+  // access. No-op in dev open mode.
+  const authorize = (pid: string): boolean => {
+    try {
+      ensureProjectAccess(pid, user);
+      return true;
+    } catch (err) {
+      if (err instanceof ForbiddenError) {
+        json(res, 403, { error: "forbidden" });
+        return false;
+      }
+      throw err;
+    }
+  };
+
+  // GET /api/projects — list all projects (filtered to the user's projects)
   if (url === "/api/projects" && method === "GET") {
-    const projects = listProjects();
+    const projects = filterAccessibleProjects(listProjects(), user);
     json(res, 200, { projects });
     return true;
   }
@@ -161,6 +200,7 @@ export async function handleApiRequest(
   if (url === "/api/projects" && method === "POST") {
     try {
       const { projectId } = parseJson(createProjectSchema, await readBody(req));
+      if (!authorize(projectId)) return true;
       const tree = loadProjectTree(projectId);
       json(res, 201, tree);
     } catch (err) {
@@ -173,6 +213,7 @@ export async function handleApiRequest(
   const sseMatch = url.match(/^\/preview-events\/([^/?]+)/);
   if (sseMatch && method === "GET") {
     const pid = decodeURIComponent(sseMatch[1]);
+    if (!authorize(pid)) return true;
     handlePreviewEvents(req, res, pid);
     return true;
   }
@@ -181,6 +222,7 @@ export async function handleApiRequest(
   const previewMatch = url.match(/^\/preview\/([^/]+)\/(.+)/);
   if (previewMatch && method === "GET") {
     const pid = decodeURIComponent(previewMatch[1]);
+    if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(previewMatch[2]);
     handlePreviewRequest(req, res, pid, filePath);
     return true;
@@ -190,6 +232,7 @@ export async function handleApiRequest(
   const searchMatch = url.match(/^\/api\/search\/([^/?]+)/);
   if (searchMatch && method === "GET") {
     const pid = decodeURIComponent(searchMatch[1]);
+    if (!authorize(pid)) return true;
     const urlObj = new URL(url, "http://localhost");
     const query = urlObj.searchParams.get("q") ?? "";
     const isRegex = urlObj.searchParams.get("regex") === "1";
@@ -202,6 +245,7 @@ export async function handleApiRequest(
   if (terminalMatch && method === "POST") {
     try {
       const pid = parseValue(projectIdSchema, decodeURIComponent(terminalMatch[1]));
+      if (!authorize(pid)) return true;
       const { command } = parseJson(terminalSchema, await readBody(req));
       await handleTerminalRequest(res, pid, command);
     } catch (err) {
@@ -214,6 +258,7 @@ export async function handleApiRequest(
   const historyMatch = url.match(/^\/api\/history\/([^/]+)\/(.+)/);
   if (historyMatch && method === "GET") {
     const pid = decodeURIComponent(historyMatch[1]);
+    if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(historyMatch[2]);
     handleHistoryRequest(res, pid, filePath);
     return true;
@@ -223,6 +268,7 @@ export async function handleApiRequest(
   const downloadMatch = url.match(/^\/api\/download\/([^/?]+)/);
   if (downloadMatch && method === "GET") {
     const pid = decodeURIComponent(downloadMatch[1]);
+    if (!authorize(pid)) return true;
     handleDownloadRequest(res, pid);
     return true;
   }
@@ -231,6 +277,7 @@ export async function handleApiRequest(
   const scanMatch = url.match(/^\/api\/scan\/([^/?]+)/);
   if (scanMatch && method === "POST") {
     const pid = decodeURIComponent(scanMatch[1]);
+    if (!authorize(pid)) return true;
     try {
       handleScanRequest(res, pid);
     } catch (err) {
@@ -244,6 +291,7 @@ export async function handleApiRequest(
   const uploadMatch = url.match(/^\/api\/upload\/([^/?]+)/);
   if (uploadMatch && method === "POST") {
     const pid = decodeURIComponent(uploadMatch[1]);
+    if (!authorize(pid)) return true;
     try {
       const body = await readBody(req);
       handleUploadRequest(res, pid, body);
@@ -258,6 +306,7 @@ export async function handleApiRequest(
   const syncMatch = url.match(/^\/api\/sync\/([^/?]+)/);
   if (syncMatch && method === "POST") {
     const pid = decodeURIComponent(syncMatch[1]);
+    if (!authorize(pid)) return true;
     handleSyncRequest(res, pid);
     return true;
   }
@@ -266,6 +315,7 @@ export async function handleApiRequest(
   const replaceMatch = url.match(/^\/api\/replace\/([^/?]+)/);
   if (replaceMatch && method === "POST") {
     const pid = decodeURIComponent(replaceMatch[1]);
+    if (!authorize(pid)) return true;
     const urlObj = new URL(url, "http://localhost");
     const query = urlObj.searchParams.get("q") ?? "";
     const replacement = urlObj.searchParams.get("replace") ?? "";
@@ -279,6 +329,7 @@ export async function handleApiRequest(
   if (cloneMatch && method === "POST") {
     try {
       const pid = parseValue(projectIdSchema, decodeURIComponent(cloneMatch[1]));
+      if (!authorize(pid)) return true;
       const { repoUrl } = parseJson(cloneSchema, await readBody(req));
       await handleCloneRequest(res, pid, repoUrl);
     } catch (err) {
@@ -291,6 +342,7 @@ export async function handleApiRequest(
   const assetMatch = url.match(/^\/api\/assets\/([^/]+)\/(.+)/);
   if (assetMatch && method === "GET") {
     const pid = decodeURIComponent(assetMatch[1]);
+    if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(assetMatch[2]);
     handleAssetRequest(res, pid, filePath);
     return true;
@@ -307,6 +359,7 @@ export async function handleApiRequest(
     fail(err, "invalid projectId");
     return true;
   }
+  if (!authorize(projectId)) return true;
 
   // GET /api/files/:projectId — get file tree
   if (method === "GET") {

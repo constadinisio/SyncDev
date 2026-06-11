@@ -26,6 +26,10 @@ export interface AppConfig {
   /** Fixed-window rate limit for sensitive endpoints (terminal, clone, upload, scan). */
   readonly rateLimitWindowMs: number;
   readonly rateLimitMax: number;
+  /** When true, every API/WS request must carry a valid token. Defaults to production. */
+  readonly authEnforced: boolean;
+  /** Shared HS256 secret used to verify tokens minted by the web app. */
+  readonly collabJwtSecret: string | undefined;
 }
 
 class ConfigError extends Error {
@@ -42,6 +46,14 @@ function parseInteger(name: string, raw: string | undefined, fallback: number): 
     throw new ConfigError(`${name} must be a non-negative integer, got "${raw}"`);
   }
   return value;
+}
+
+function parseBoolean(name: string, raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw === "") return fallback;
+  const value = raw.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(value)) return true;
+  if (["0", "false", "no", "off"].includes(value)) return false;
+  throw new ConfigError(`${name} must be a boolean (true/false), got "${raw}"`);
 }
 
 function parseNodeEnv(raw: string | undefined): NodeEnv {
@@ -88,6 +100,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const nodeEnv = parseNodeEnv(env.NODE_ENV);
   const isProduction = nodeEnv === "production";
 
+  // Auth is enforced in production by default; can be toggled explicitly.
+  const authEnforced = parseBoolean("AUTH_ENFORCED", env.AUTH_ENFORCED, isProduction);
+  const collabJwtSecret = env.COLLAB_JWT_SECRET?.trim() || undefined;
+  if (authEnforced && !collabJwtSecret) {
+    throw new ConfigError(
+      "COLLAB_JWT_SECRET is required when authentication is enforced (production)",
+    );
+  }
+  if (collabJwtSecret && collabJwtSecret.length < 32) {
+    throw new ConfigError("COLLAB_JWT_SECRET must be at least 32 characters");
+  }
+
   const resolved: AppConfig = Object.freeze({
     nodeEnv,
     isProduction,
@@ -101,6 +125,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     logLevel: env.LOG_LEVEL ?? (isProduction ? "info" : "debug"),
     rateLimitWindowMs: parseInteger("RATE_LIMIT_WINDOW_MS", env.RATE_LIMIT_WINDOW_MS, 60_000),
     rateLimitMax: parseInteger("RATE_LIMIT_MAX", env.RATE_LIMIT_MAX, 30),
+    authEnforced,
+    collabJwtSecret,
   });
 
   cached = resolved;

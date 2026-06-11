@@ -14,8 +14,14 @@ import {
 } from "./message-handler.js";
 import { notifyPreviewClients } from "../api/preview.js";
 import { log, logError } from "../lib/logger.js";
+import { authenticate, AuthRequiredError } from "../lib/auth.js";
+import { ensureProjectAccess, ForbiddenError } from "../lib/memberships.js";
 
 const MESSAGE_AWARENESS = 1;
+
+// WebSocket close codes (4000-4999 are application-defined).
+const CLOSE_UNAUTHORIZED = 4401;
+const CLOSE_FORBIDDEN = 4403;
 
 function extractRoomId(url: string): string | null {
   // URL format: /<roomId> where roomId is URL-encoded
@@ -25,11 +31,33 @@ function extractRoomId(url: string): string | null {
   return decodeURIComponent(trimmed);
 }
 
-export function handleConnection(ws: WebSocket, req: IncomingMessage): void {
+export async function handleConnection(ws: WebSocket, req: IncomingMessage): Promise<void> {
   const roomId = extractRoomId(req.url ?? "");
   if (!roomId) {
     log("ws", "connection rejected: no room ID in URL");
     ws.close(4000, "Missing room ID");
+    return;
+  }
+
+  // Authenticate and authorize before joining the room. The roomId is
+  // "projectId::filePath" (or just a projectId), so the project is its prefix.
+  const authProjectId = roomId.includes("::") ? roomId.split("::")[0] : roomId;
+  try {
+    const wsUser = await authenticate(req);
+    ensureProjectAccess(authProjectId, wsUser);
+  } catch (err) {
+    if (err instanceof AuthRequiredError) {
+      log("ws", `connection rejected: unauthorized (room "${roomId}")`);
+      ws.close(CLOSE_UNAUTHORIZED, "Unauthorized");
+      return;
+    }
+    if (err instanceof ForbiddenError) {
+      log("ws", `connection rejected: forbidden (room "${roomId}")`);
+      ws.close(CLOSE_FORBIDDEN, "Forbidden");
+      return;
+    }
+    logError("ws", `auth error for room "${roomId}"`, err);
+    ws.close(CLOSE_UNAUTHORIZED, "Unauthorized");
     return;
   }
 
