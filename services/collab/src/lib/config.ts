@@ -34,6 +34,19 @@ export interface AppConfig {
   readonly terminal: TerminalSandboxConfig;
   /** Sentry DSN for error tracking. Undefined disables Sentry. */
   readonly sentryDsn: string | undefined;
+  /** Reproducible per-project dev environments (devcontainers). */
+  readonly environments: EnvironmentConfig;
+}
+
+export interface EnvironmentConfig {
+  /** When true, terminal commands run in the persistent per-project container. */
+  readonly enabled: boolean;
+  /** Image used when a project has no .devcontainer/devcontainer.json. */
+  readonly defaultImage: string;
+  /** Max concurrent running environments (single-VPS protection). */
+  readonly maxActive: number;
+  /** Idle delay (ms) before stopping an environment with no connected clients. */
+  readonly idleMs: number;
 }
 
 export interface TerminalSandboxConfig {
@@ -156,6 +169,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       hostWorkspaceBase: env.SANDBOX_HOST_WORKSPACE_BASE?.trim() ?? "",
     }),
     sentryDsn: env.SENTRY_DSN?.trim() || undefined,
+    environments: Object.freeze({
+      enabled: parseBoolean("ENVIRONMENTS_ENABLED", env.ENVIRONMENTS_ENABLED, isProduction),
+      defaultImage:
+        env.DEVCONTAINER_DEFAULT_IMAGE ?? "mcr.microsoft.com/devcontainers/javascript-node:20",
+      maxActive: parseInteger("MAX_ACTIVE_ENVIRONMENTS", env.MAX_ACTIVE_ENVIRONMENTS, 5),
+      idleMs: parseInteger("ENV_IDLE_MS", env.ENV_IDLE_MS, 600_000),
+    }),
   });
 
   cached = resolved;

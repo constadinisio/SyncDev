@@ -1,6 +1,7 @@
 import type { WebSocket } from "ws";
 import { createRoom, destroyRoom } from "./room.js";
 import { loadSnapshot } from "../persistence/snapshot-store.js";
+import { projectPresence } from "../environments/presence.js";
 import {
   scheduleDebouncedSave,
   persistRoom,
@@ -41,11 +42,13 @@ export function getOrCreateRoom(roomId: string): Room {
 
 export function addClient(room: Room, ws: WebSocket): void {
   room.clients.add(ws);
+  projectPresence.clientJoined(room.id);
   log("room", `client joined room "${room.id}" (${room.clients.size} connected)`);
 }
 
 export function removeClient(room: Room, ws: WebSocket): void {
   room.clients.delete(ws);
+  projectPresence.clientLeft(room.id);
   log("room", `client left room "${room.id}" (${room.clients.size} connected)`);
 
   if (room.clients.size === 0) {

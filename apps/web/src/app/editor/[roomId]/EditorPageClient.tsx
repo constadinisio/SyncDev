@@ -5,6 +5,7 @@ import { useAwareness } from "@/hooks/useAwareness";
 import { CollaborativeEditor } from "@/components/editor/LazyCollaborativeEditor";
 import { ConnectionStatus } from "@/components/editor/ConnectionStatus";
 import { UserList } from "@/components/presence/UserList";
+import { EnvironmentPanel } from "@/components/environment/EnvironmentPanel";
 
 function inferLanguage(roomId: string): string {
   const ext = roomId.split(".").pop()?.toLowerCase();
@@ -30,6 +31,7 @@ function inferLanguage(roomId: string): string {
 export default function EditorPage({ params }: { params: { roomId: string } }) {
   const { roomId } = params;
   const decodedRoomId = decodeURIComponent(roomId);
+  const projectId = decodedRoomId.includes("::") ? decodedRoomId.split("::")[0] : decodedRoomId;
   const connection = useYjsConnection(decodedRoomId);
   const users = useAwareness(connection?.provider ?? null);
 
@@ -55,6 +57,9 @@ export default function EditorPage({ params }: { params: { roomId: string } }) {
             Connecting...
           </div>
         )}
+      </div>
+      <div className="border-t border-surface-300/40 bg-surface-150">
+        <EnvironmentPanel projectId={projectId} />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
 import { handleConnection } from "./ws/connection-handler.js";
 import { handleApiRequest } from "./api/routes.js";
 import { initRoomManager, shutdownRoomManager } from "./rooms/room-manager.js";
+import { initEnvironmentLifecycle } from "./environments/environment-manager-instance.js";
 import { loadConfig, type AppConfig } from "./lib/config.js";
 import { markReady, markNotReady } from "./lib/readiness.js";
 import { checkDockerAvailable } from "./lib/sandbox.js";
@@ -34,6 +35,7 @@ const wss = new WebSocketServer({ server: httpServer });
 wss.on("connection", handleConnection);
 
 initRoomManager();
+initEnvironmentLifecycle();
 
 // Graceful shutdown: stop reporting ready, drain, then exit.
 let shuttingDown = false;

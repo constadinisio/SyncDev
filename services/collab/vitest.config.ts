@@ -22,6 +22,10 @@ export default defineConfig({
         "src/persistence/snapshot-store.ts",
         "src/api/file-tree.ts",
         "src/persistence/disk-sync.ts",
+        "src/environments/devcontainer-config.ts",
+        "src/environments/environment-manager.ts",
+        "src/environments/presence.ts",
+        "src/environments/lifecycle.ts",
       ],
       thresholds: {
         statements: 80,
