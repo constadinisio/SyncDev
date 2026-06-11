@@ -8,6 +8,23 @@ const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspac
 const MAX_COMMAND_LENGTH = 4000;
 const MAX_OUTPUT_LENGTH = 100_000;
 
+function getShell(): string {
+  if (process.platform !== "win32") return "/bin/bash";
+
+  // On Windows, prefer Git Bash for proper git/unix command support
+  const gitBashPaths = [
+    "C:\\Program Files\\Git\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+  ];
+
+  for (const p of gitBashPaths) {
+    if (existsSync(p)) return p;
+  }
+
+  // Fallback to PowerShell which handles git better than cmd.exe
+  return "powershell.exe";
+}
+
 // Timeout tiers: long-running commands get more time
 const LONG_RUNNING_PREFIXES = [
   "npm install", "npm i ", "npm ci",
@@ -84,7 +101,7 @@ function executeCommand(
         cwd,
         timeout: timeoutMs,
         maxBuffer: 5 * 1024 * 1024, // 5MB buffer for large outputs
-        shell: process.platform === "win32" ? "cmd.exe" : "/bin/bash",
+        shell: getShell(),
         env: {
           ...process.env,
           // Keep the system PATH so npm, node, git, python etc. are found

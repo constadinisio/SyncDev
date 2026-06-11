@@ -46,7 +46,6 @@ export function ChatPanel({
   const [inputText, setInputText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Observe the Y.Array for messages
   useEffect(() => {
     if (!connection) return;
 
@@ -68,7 +67,6 @@ export function ChatPanel({
     };
   }, [connection]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     const el = scrollRef.current;
     if (el) {
@@ -102,104 +100,45 @@ export function ChatPanel({
     [handleSend],
   );
 
+  const isValid = inputText.trim().length > 0;
+
   return (
-    <div
-      style={{
-        width: 300,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: "1px solid #404040",
-        backgroundColor: "#1e1e1e",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
+    <div className="w-[300px] shrink-0 flex flex-col border-l border-surface-300/40 bg-surface-100 font-sans">
       {/* Header */}
-      <div
-        style={{
-          height: 36,
-          backgroundColor: "#252526",
-          borderBottom: "1px solid #404040",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 12px",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{ color: "#d4d4d4", fontSize: 13, fontWeight: 500 }}>
-          Chat
-        </span>
+      <div className="h-9 bg-surface-150 border-b border-surface-300/40 flex items-center justify-between px-3 shrink-0">
+        <span className="text-surface-800 text-[13px] font-medium">Chat</span>
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#808080",
-            cursor: "pointer",
-            fontSize: 18,
-            lineHeight: 1,
-            padding: "2px 4px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#d4d4d4";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#808080";
-          }}
+          className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            p-1 rounded transition-colors duration-100"
         >
-          x
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
       {/* Messages */}
       <div
         ref={scrollRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 8,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
+        className="flex-1 overflow-y-auto p-3 flex flex-col gap-3"
       >
         {messages.length === 0 && (
-          <div
-            style={{
-              color: "#808080",
-              fontSize: 12,
-              textAlign: "center",
-              marginTop: 24,
-            }}
-          >
+          <div className="text-surface-500 text-xs text-center mt-6">
             No messages yet. Say hello!
           </div>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} style={{ fontSize: 13 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 6,
-                marginBottom: 2,
-              }}
-            >
-              <span style={{ color: msg.color, fontWeight: 600 }}>
+          <div key={msg.id} className="text-[13px] animate-fade-in">
+            <div className="flex items-baseline gap-1.5 mb-0.5">
+              <span className="font-semibold" style={{ color: msg.color }}>
                 {msg.user}
               </span>
-              <span style={{ color: "#6a6a6a", fontSize: 11 }}>
+              <span className="text-surface-500 text-[11px]">
                 {formatTime(msg.timestamp)}
               </span>
             </div>
-            <div
-              style={{
-                color: "#cccccc",
-                wordBreak: "break-word",
-                lineHeight: 1.4,
-              }}
-            >
+            <div className="text-surface-700 break-words leading-relaxed">
               {msg.text}
             </div>
           </div>
@@ -207,47 +146,25 @@ export function ChatPanel({
       </div>
 
       {/* Input */}
-      <div
-        style={{
-          borderTop: "1px solid #404040",
-          padding: 8,
-          display: "flex",
-          gap: 6,
-          flexShrink: 0,
-        }}
-      >
+      <div className="border-t border-surface-300/40 p-2 flex gap-1.5 shrink-0">
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          style={{
-            flex: 1,
-            backgroundColor: "#3c3c3c",
-            border: "1px solid #555",
-            borderRadius: 4,
-            padding: "6px 10px",
-            color: "#d4d4d4",
-            fontSize: 13,
-            outline: "none",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          className="flex-1 bg-surface-200 border border-surface-300/60 rounded-lg px-3 py-2
+            text-surface-800 text-[13px] outline-none font-sans
+            focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
         />
         <button
           onClick={handleSend}
-          disabled={inputText.trim().length === 0}
-          style={{
-            backgroundColor:
-              inputText.trim().length > 0 ? "#0e639c" : "#3c3c3c",
-            color: inputText.trim().length > 0 ? "#ffffff" : "#808080",
-            border: "none",
-            borderRadius: 4,
-            padding: "6px 12px",
-            fontSize: 13,
-            cursor: inputText.trim().length > 0 ? "pointer" : "default",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          disabled={!isValid}
+          className={`rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-100
+            ${isValid
+              ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
+              : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            }`}
         >
           Send
         </button>

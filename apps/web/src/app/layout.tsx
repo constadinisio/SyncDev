@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import "./globals.css";
+import { Providers } from "./Providers";
 
 export const metadata: Metadata = {
-  title: "Collab Editor",
-  description: "Collaborative code editor powered by Yjs",
+  title: "SyncDev",
+  description: "Real-time collaborative code editor powered by Yjs CRDTs",
 };
 
 export default function RootLayout({
@@ -11,9 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, padding: 0, height: "100vh" }}>
-        {children}
+    <html lang="en" className="dark">
+      <body className="min-h-screen bg-surface-50 text-surface-800 antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

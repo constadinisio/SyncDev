@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import { join } from "path";
 import { SNAPSHOT_DIR } from "./constants.js";
 import { log, logError } from "../lib/logger.js";
@@ -27,6 +27,18 @@ export function loadSnapshot(roomId: string): Uint8Array | null {
   } catch (err) {
     logError("snapshot", `failed to load snapshot for room "${roomId}"`, err);
     return null;
+  }
+}
+
+export function deleteSnapshot(roomId: string): void {
+  const filePath = snapshotPath(roomId);
+  if (existsSync(filePath)) {
+    try {
+      unlinkSync(filePath);
+      log("snapshot", `deleted snapshot for room "${roomId}"`);
+    } catch (err) {
+      logError("snapshot", `failed to delete snapshot for room "${roomId}"`, err);
+    }
   }
 }
 

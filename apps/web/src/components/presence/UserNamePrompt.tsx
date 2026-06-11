@@ -36,36 +36,17 @@ export function UserNamePrompt({ onSubmit }: UserNamePromptProps) {
     [handleSubmit],
   );
 
+  const isValid = name.trim().length > 0;
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10000,
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: "#252526",
-          border: "1px solid #404040",
-          borderRadius: 6,
-          padding: 24,
-          minWidth: 320,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <div style={{ color: "#d4d4d4", fontSize: 16, fontWeight: 600 }}>
-          Enter your name
-        </div>
-        <div style={{ color: "#808080", fontSize: 13 }}>
-          This name will be visible to other collaborators.
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[10000] animate-fade-in">
+      <div className="bg-surface-150 border border-surface-300/60 rounded-2xl p-8 min-w-[360px]
+        flex flex-col gap-5 shadow-2xl shadow-black/40 animate-scale-in">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-surface-900 text-lg font-semibold">Welcome to SyncDev</h2>
+          <p className="text-surface-500 text-sm">
+            Enter your name to start collaborating.
+          </p>
         </div>
         <input
           type="text"
@@ -75,32 +56,21 @@ export function UserNamePrompt({ onSubmit }: UserNamePromptProps) {
           placeholder="Your name..."
           autoFocus
           maxLength={30}
-          style={{
-            backgroundColor: "#3c3c3c",
-            border: "1px solid #555",
-            borderRadius: 4,
-            padding: "8px 12px",
-            color: "#d4d4d4",
-            fontSize: 14,
-            outline: "none",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          className="bg-surface-200 border border-surface-300/60 rounded-lg px-4 py-3
+            text-surface-900 text-sm outline-none font-sans
+            focus:border-brand-500/60 focus:ring-1 focus:ring-brand-500/30
+            transition-all duration-150 placeholder:text-surface-500"
         />
         <button
           onClick={handleSubmit}
-          disabled={name.trim().length === 0}
-          style={{
-            backgroundColor: name.trim().length > 0 ? "#0e639c" : "#3c3c3c",
-            color: name.trim().length > 0 ? "#ffffff" : "#808080",
-            border: "none",
-            borderRadius: 4,
-            padding: "8px 16px",
-            fontSize: 14,
-            cursor: name.trim().length > 0 ? "pointer" : "default",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          disabled={!isValid}
+          className={`rounded-lg px-5 py-3 text-sm font-semibold transition-all duration-150
+            ${isValid
+              ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer shadow-lg shadow-brand-600/25"
+              : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            }`}
         >
-          Join
+          Join Session
         </button>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { MonacoBinding } from "y-monaco";
 import type * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 
-interface CollaborativeEditorProps {
+export interface CollaborativeEditorProps {
   readonly ytext: Y.Text;
   readonly provider: WebsocketProvider;
   readonly language?: string;

@@ -14,6 +14,7 @@ interface TerminalPanelProps {
   readonly projectId: string;
   readonly height: number;
   readonly onResize: (newHeight: number) => void;
+  readonly onCommandComplete?: () => void;
 }
 
 import { getApiBase } from "@/lib/api";
@@ -24,6 +25,7 @@ export function TerminalPanel({
   projectId,
   height,
   onResize,
+  onCommandComplete,
 }: TerminalPanelProps) {
   const [entries, setEntries] = useState<readonly TerminalEntry[]>([]);
   const [input, setInput] = useState("");
@@ -32,14 +34,12 @@ export function TerminalPanel({
   const outputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
   }, [entries]);
 
-  // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -101,6 +101,8 @@ export function TerminalPanel({
         setInput("");
         setHistoryIndex(-1);
         inputRef.current?.focus();
+        // Notify parent so it can refresh the file tree
+        onCommandComplete?.();
       }
     },
     [projectId],
@@ -167,56 +169,24 @@ export function TerminalPanel({
 
   return (
     <div
-      style={{
-        height,
-        backgroundColor: "#1e1e1e",
-        borderTop: "1px solid #404040",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-      }}
+      style={{ height }}
+      className="bg-surface-0 border-t border-surface-300/40 flex flex-col shrink-0"
     >
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeMouseDown}
-        style={{
-          height: 4,
-          cursor: "row-resize",
-          backgroundColor: "transparent",
-          flexShrink: 0,
-        }}
+        className="h-1 cursor-row-resize bg-transparent shrink-0 hover:bg-brand-500/30 transition-colors duration-150"
       />
 
       {/* Terminal header */}
-      <div
-        style={{
-          padding: "4px 12px",
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          color: "#bbbbbb",
-          fontFamily: "system-ui, sans-serif",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid #404040",
-          flexShrink: 0,
-        }}
-      >
+      <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center border-b border-surface-300/40 shrink-0">
         <span>Terminal</span>
         <button
           onClick={handleClear}
           title="Clear Terminal"
-          style={{
-            background: "none",
-            border: "none",
-            color: "#cccccc",
-            cursor: "pointer",
-            fontSize: 12,
-            padding: "0 4px",
-            fontFamily: "system-ui, sans-serif",
-          }}
+          className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            text-xs font-sans font-normal normal-case tracking-normal transition-colors duration-100"
         >
           Clear
         </button>
@@ -225,38 +195,26 @@ export function TerminalPanel({
       {/* Output area */}
       <div
         ref={outputRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "4px 12px",
-          fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-          fontSize: 13,
-          lineHeight: 1.4,
-        }}
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 font-mono text-[13px] leading-relaxed"
       >
         {entries.map((entry) => (
-          <div key={entry.id} style={{ marginBottom: 8 }}>
-            {/* Command */}
-            <div style={{ color: "#569cd6" }}>
-              <span style={{ color: "#6a9955" }}>$ </span>
+          <div key={entry.id} className="mb-2">
+            <div className="text-brand-400">
+              <span className="text-accent-green">$ </span>
               {entry.command}
             </div>
-            {/* Stdout */}
             {entry.stdout && (
-              <div style={{ color: "#d4d4d4", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+              <div className="text-surface-800 whitespace-pre-wrap break-all">
                 {entry.stdout}
               </div>
             )}
-            {/* Stderr */}
             {entry.stderr && (
-              <div style={{ color: "#f44747", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+              <div className="text-accent-red whitespace-pre-wrap break-all">
                 {entry.stderr}
               </div>
             )}
-            {/* Exit code indicator */}
             {entry.exitCode !== 0 && (
-              <div style={{ color: "#808080", fontSize: 11 }}>
+              <div className="text-surface-500 text-[11px]">
                 exit code: {entry.exitCode}
               </div>
             )}
@@ -264,36 +222,16 @@ export function TerminalPanel({
         ))}
 
         {running && (
-          <div style={{ color: "#569cd6", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ animation: "pulse 1.5s infinite", display: "inline-block" }}>
-              ●
-            </span>
-            Running... (long commands like npm install may take a few minutes)
-            <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+          <div className="text-brand-400 flex items-center gap-2">
+            <span className="w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            Running... (long commands may take a few minutes)
           </div>
         )}
       </div>
 
       {/* Input line */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          padding: "4px 12px",
-          borderTop: "1px solid #333333",
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            color: "#6a9955",
-            fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-            fontSize: 13,
-            marginRight: 6,
-          }}
-        >
-          $
-        </span>
+      <div className="flex items-center px-3 py-1 border-t border-surface-300/30 shrink-0">
+        <span className="text-accent-green font-mono text-[13px] mr-1.5">$</span>
         <input
           ref={inputRef}
           type="text"
@@ -302,15 +240,8 @@ export function TerminalPanel({
           onKeyDown={handleKeyDown}
           disabled={running}
           placeholder={running ? "Running..." : "Type a command..."}
-          style={{
-            flex: 1,
-            backgroundColor: "transparent",
-            color: "#d4d4d4",
-            border: "none",
-            outline: "none",
-            fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-            fontSize: 13,
-          }}
+          className="flex-1 bg-transparent text-surface-800 border-none outline-none font-mono text-[13px]
+            placeholder:text-surface-500"
         />
       </div>
     </div>

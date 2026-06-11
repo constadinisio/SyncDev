@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
+import { IndexeddbPersistence } from "y-indexeddb";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
@@ -22,6 +23,10 @@ export function useYjsConnection(roomId: string): YjsConnection | null {
     const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL
       ?? `ws://${window.location.hostname}:4000`;
     const doc = new Y.Doc();
+
+    // IndexedDB persistence — survives browser restarts
+    const idbPersistence = new IndexeddbPersistence(`syncdev-${roomId}`, doc);
+
     const provider = new WebsocketProvider(wsUrl, roomId, doc, {
       connect: true,
     });
@@ -39,6 +44,7 @@ export function useYjsConnection(roomId: string): YjsConnection | null {
       provider.off("status", onStatus);
       provider.disconnect();
       provider.destroy();
+      idbPersistence.destroy();
       doc.destroy();
     };
 

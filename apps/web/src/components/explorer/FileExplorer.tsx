@@ -12,6 +12,12 @@ import {
 import { TreeNodeItem } from "./TreeNodeItem";
 import { ContextMenu } from "./ContextMenu";
 
+interface UserPresenceInfo {
+  readonly name: string;
+  readonly color: string;
+  readonly activeFile: string | null;
+}
+
 interface FileExplorerProps {
   readonly projectId: string;
   readonly tree: TreeNode[];
@@ -19,6 +25,7 @@ interface FileExplorerProps {
   readonly onFileSelect: (path: string) => void;
   readonly onTreeUpdate: (tree: ProjectTree) => void;
   readonly onDeleteFile?: (path: string) => void;
+  readonly userPresence?: readonly UserPresenceInfo[];
 }
 
 interface ContextMenuState {
@@ -44,10 +51,12 @@ export function FileExplorer({
   onFileSelect,
   onTreeUpdate,
   onDeleteFile,
+  userPresence,
 }: FileExplorerProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [collapseKey, setCollapseKey] = useState(0);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, path: string, type: "file" | "folder") => {
@@ -73,14 +82,29 @@ export function FileExplorer({
     [projectId, onTreeUpdate],
   );
 
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
   const handleDelete = useCallback(
-    async (path: string) => {
-      if (!confirm(`Delete "${path}"?`)) return;
-      const updated = await deleteProjectNode(projectId, path);
-      onTreeUpdate(updated);
-      onDeleteFile?.(path);
+    (path: string) => {
+      setPendingDelete(path);
     },
-    [projectId, onTreeUpdate, onDeleteFile],
+    [],
+  );
+
+  const confirmDelete = useCallback(
+    async () => {
+      if (!pendingDelete) return;
+      try {
+        const updated = await deleteProjectNode(projectId, pendingDelete);
+        onTreeUpdate(updated);
+        onDeleteFile?.(pendingDelete);
+      } catch (err) {
+        console.error("Delete failed:", err);
+      } finally {
+        setPendingDelete(null);
+      }
+    },
+    [pendingDelete, projectId, onTreeUpdate, onDeleteFile],
   );
 
   const handleRename = useCallback(
@@ -153,7 +177,6 @@ export function FileExplorer({
 
   const handleRootDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    // Check if dragging external files
     if (e.dataTransfer.types.includes("Files")) {
       e.dataTransfer.dropEffect = "copy";
       setIsDragOver(true);
@@ -163,7 +186,6 @@ export function FileExplorer({
   }, []);
 
   const handleRootDragLeave = useCallback((e: React.DragEvent) => {
-    // Only clear if leaving the container itself
     const rect = e.currentTarget.getBoundingClientRect();
     const { clientX, clientY } = e;
     if (
@@ -181,13 +203,11 @@ export function FileExplorer({
       e.preventDefault();
       setIsDragOver(false);
 
-      // Check for external file drops first
       if (e.dataTransfer.files.length > 0) {
         void handleUploadFiles(e.dataTransfer.files, "");
         return;
       }
 
-      // Internal tree node move
       const sourcePath = e.dataTransfer.getData("text/plain");
       if (sourcePath) {
         handleMove(sourcePath, "");
@@ -223,124 +243,95 @@ export function FileExplorer({
   }, [contextMenu, promptAndCreate, handleDelete]);
 
   return (
-    <div
-      style={{
-        height: "100%",
-        backgroundColor: "#252526",
-        borderRight: "1px solid #404040",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
-      <div
-        style={{
-          padding: "8px 12px",
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          color: "#bbbbbb",
-          fontFamily: "system-ui, sans-serif",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center">
         <span>Explorer</span>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div className="flex gap-1">
+          <button
+            onClick={() => {
+              // Collapse all folders by triggering a re-render with a key change
+              setCollapseKey((k) => k + 1);
+            }}
+            title="Collapse All"
+            className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
+              transition-colors duration-100"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          </button>
           <button
             onClick={() => promptAndCreate("", "file")}
             title="New File"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#cccccc",
-              cursor: "pointer",
-              fontSize: 16,
-              padding: "0 4px",
-              lineHeight: 1,
-            }}
+            className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
+              transition-colors duration-100"
           >
-            +
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
           </button>
           <button
             onClick={() => promptAndCreate("", "folder")}
             title="New Folder"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#cccccc",
-              cursor: "pointer",
-              fontSize: 14,
-              padding: "0 4px",
-              lineHeight: 1,
-            }}
+            className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
+              transition-colors duration-100"
           >
-            📁
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
           </button>
         </div>
       </div>
 
       {/* Project name */}
-      <div
-        style={{
-          padding: "4px 12px",
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#cccccc",
-          fontFamily: "system-ui, sans-serif",
-        }}
-      >
-        ▾ {projectId.toUpperCase()}
+      <div className="px-3 py-1 text-[13px] font-semibold text-surface-700 font-sans flex items-center gap-1.5">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-surface-500">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+        {projectId.toUpperCase()}
       </div>
 
       {/* Tree */}
       <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          border: isDragOver ? "2px dashed #0e639c" : "2px solid transparent",
-          transition: "border-color 0.15s",
-        }}
+        className={`flex-1 overflow-y-auto overflow-x-hidden transition-all duration-150
+          ${isDragOver ? "border-2 border-dashed border-brand-500" : "border-2 border-transparent"}`}
         onContextMenu={handleRootContextMenu}
         onDragOver={handleRootDragOver}
         onDragLeave={handleRootDragLeave}
         onDrop={handleRootDrop}
       >
         {tree.length === 0 ? (
-          <div
-            style={{
-              padding: "16px 12px",
-              color: "#808080",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-            }}
-          >
+          <div className="px-3 py-4 text-surface-500 text-xs font-sans">
             Right-click to create files
           </div>
         ) : (
-          tree.map((node) => (
-            <TreeNodeItem
-              key={node.name}
-              node={node}
-              path={node.name}
-              depth={1}
-              activeFile={activeFile}
-              onFileSelect={onFileSelect}
-              onContextMenu={handleContextMenu}
-              renamingPath={renamingPath}
-              onRename={handleRename}
-              onRenameCancel={handleRenameCancel}
-              onMove={handleMove}
-            />
-          ))
+          tree.map((node) => {
+            const usersOnFile = userPresence?.filter(
+              (u) => u.activeFile === node.name,
+            );
+            return (
+              <TreeNodeItem
+                key={`${node.name}-${collapseKey}`}
+                node={node}
+                path={node.name}
+                depth={1}
+                activeFile={activeFile}
+                onFileSelect={onFileSelect}
+                onContextMenu={handleContextMenu}
+                renamingPath={renamingPath}
+                onRename={handleRename}
+                onRenameCancel={handleRenameCancel}
+                onMove={handleMove}
+                presenceUsers={usersOnFile}
+                allPresence={userPresence}
+              />
+            );
+          })
         )}
       </div>
 
-      {/* Context menu */}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -348,6 +339,36 @@ export function FileExplorer({
           items={getContextMenuItems()}
           onClose={() => setContextMenu(null)}
         />
+      )}
+
+      {/* Delete confirmation dialog */}
+      {pendingDelete && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center animate-fade-in">
+          <div className="bg-surface-150 border border-surface-300/60 rounded-xl p-5 min-w-[320px]
+            flex flex-col gap-4 shadow-2xl shadow-black/40 animate-scale-in font-sans">
+            <div className="text-surface-900 text-sm font-semibold">Delete file?</div>
+            <div className="text-surface-600 text-xs">
+              Are you sure you want to delete <span className="font-medium text-surface-800">{pendingDelete}</span>? This cannot be undone.
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="px-4 py-2 text-xs font-medium bg-surface-200 text-surface-700
+                  border border-surface-300/60 rounded-lg cursor-pointer hover:bg-surface-300
+                  transition-colors duration-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-xs font-medium bg-red-600 hover:bg-red-500 text-white
+                  border-none rounded-lg cursor-pointer transition-colors duration-100"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

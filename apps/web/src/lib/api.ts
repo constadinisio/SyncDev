@@ -130,6 +130,36 @@ export async function scanWorkspace(projectId: string): Promise<ProjectTree> {
   return res.json();
 }
 
+export async function cloneRepository(
+  projectId: string,
+  repoUrl: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  const res = await fetch(`${getApiBase()}/api/clone/${encodeURIComponent(projectId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ repoUrl }),
+  });
+  return res.json();
+}
+
+export function getAssetUrl(projectId: string, filePath: string): string {
+  return `${getApiBase()}/api/assets/${encodeURIComponent(projectId)}/${encodeURIComponent(filePath)}`;
+}
+
+export function isImageExtension(fileName: string): boolean {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return ["png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp"].includes(ext);
+}
+
+export function isBinaryExtension(fileName: string): boolean {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return [
+    "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp",
+    "pdf", "woff", "woff2", "ttf", "mp3", "wav", "mp4", "webm",
+    "zip", "tar", "gz", "exe", "dll", "so", "dylib",
+  ].includes(ext);
+}
+
 export async function fetchProjects(): Promise<string[]> {
   const res = await fetch(`${getApiBase()}/api/projects`);
   if (!res.ok) throw new Error(`Failed to fetch projects: ${res.status}`);

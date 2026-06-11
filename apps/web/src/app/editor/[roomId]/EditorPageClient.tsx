@@ -2,7 +2,7 @@
 
 import { useYjsConnection } from "@/hooks/useYjsConnection";
 import { useAwareness } from "@/hooks/useAwareness";
-import { CollaborativeEditor } from "@/components/editor/CollaborativeEditor";
+import { CollaborativeEditor } from "@/components/editor/LazyCollaborativeEditor";
 import { ConnectionStatus } from "@/components/editor/ConnectionStatus";
 import { UserList } from "@/components/presence/UserList";
 
@@ -38,27 +38,15 @@ export default function EditorPage({
   const users = useAwareness(connection?.provider ?? null);
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <div
-        style={{
-          padding: "8px 16px",
-          backgroundColor: "#252526",
-          color: "#d4d4d4",
-          fontFamily: "system-ui, sans-serif",
-          fontSize: 14,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          borderBottom: "1px solid #404040",
-        }}
-      >
-        <span style={{ fontWeight: 500 }}>{decodedRoomId}</span>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+    <div className="h-screen flex flex-col">
+      <div className="px-4 py-2 bg-surface-150 text-surface-800 font-sans text-sm flex justify-between items-center border-b border-surface-300/40">
+        <span className="font-medium">{decodedRoomId}</span>
+        <div className="flex gap-4 items-center">
           <UserList users={users} />
           {connection && <ConnectionStatus status={connection.status} />}
         </div>
       </div>
-      <div style={{ flex: 1 }}>
+      <div className="flex-1">
         {connection ? (
           <CollaborativeEditor
             ytext={connection.ytext}
@@ -66,16 +54,8 @@ export default function EditorPage({
             language={inferLanguage(decodedRoomId)}
           />
         ) : (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              backgroundColor: "#1e1e1e",
-              color: "#808080",
-            }}
-          >
+          <div className="flex items-center justify-center h-full bg-surface-100 text-surface-500 gap-2">
+            <span className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             Connecting...
           </div>
         )}

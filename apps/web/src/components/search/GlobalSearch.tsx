@@ -49,6 +49,10 @@ export function GlobalSearch({
   const [searching, setSearching] = useState(false);
   const [searchedQuery, setSearchedQuery] = useState("");
   const [collapsedFiles, setCollapsedFiles] = useState<ReadonlySet<string>>(new Set());
+  const [regexMode, setRegexMode] = useState(false);
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [showReplace, setShowReplace] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -66,7 +70,8 @@ export function GlobalSearch({
 
       setSearching(true);
       try {
-        const url = `${getApiBase()}/api/search/${encodeURIComponent(projectId)}?q=${encodeURIComponent(searchQuery.trim())}`;
+        const regexParam = regexMode ? "&regex=1" : "";
+        const url = `${getApiBase()}/api/search/${encodeURIComponent(projectId)}?q=${encodeURIComponent(searchQuery.trim())}${regexParam}`;
         const res = await fetch(url);
         if (!res.ok) {
           console.error("Search failed:", res.status);
@@ -130,115 +135,143 @@ export function GlobalSearch({
     });
   }, []);
 
+  const handleReplaceAll = useCallback(async () => {
+    if (!searchedQuery || !replaceQuery === undefined) return;
+    setReplacing(true);
+    try {
+      const regexParam = regexMode ? "&regex=1" : "";
+      const url = `${getApiBase()}/api/replace/${encodeURIComponent(projectId)}?q=${encodeURIComponent(searchedQuery)}&replace=${encodeURIComponent(replaceQuery)}${regexParam}`;
+      const res = await fetch(url, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        // Re-search to update results
+        performSearch(searchedQuery);
+      }
+    } catch (err) {
+      console.error("Replace failed:", err);
+    } finally {
+      setReplacing(false);
+    }
+  }, [searchedQuery, replaceQuery, regexMode, projectId, performSearch]);
+
   const totalMatches = results.reduce((sum, g) => sum + g.matches.length, 0);
 
   return (
-    <div
-      style={{
-        height: "100%",
-        backgroundColor: "#252526",
-        borderRight: "1px solid #404040",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
-      <div
-        style={{
-          padding: "8px 12px",
-          fontSize: 11,
-          fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          color: "#bbbbbb",
-          fontFamily: "system-ui, sans-serif",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center">
         <span>Search</span>
         <button
           onClick={onBack}
           title="Back to Explorer"
-          style={{
-            background: "none",
-            border: "none",
-            color: "#cccccc",
-            cursor: "pointer",
-            fontSize: 14,
-            padding: "0 4px",
-            lineHeight: 1,
-          }}
+          className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            p-1 rounded transition-colors duration-100"
         >
-          ←
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
         </button>
       </div>
 
       {/* Search input */}
-      <div style={{ padding: "4px 8px 8px" }}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Search in files..."
-          style={{
-            width: "100%",
-            padding: "4px 8px",
-            fontSize: 13,
-            fontFamily: "system-ui, sans-serif",
-            backgroundColor: "#3c3c3c",
-            color: "#d4d4d4",
-            border: "1px solid #555555",
-            borderRadius: 3,
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
+      <div className="px-2 pb-2">
+        <div className="relative flex items-center gap-1">
+          <div className="relative flex-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-500">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder={regexMode ? "Regex pattern..." : "Search in files..."}
+              className="w-full py-1.5 pl-8 pr-2 text-[13px] font-sans bg-surface-200 text-surface-800
+                border border-surface-300/60 rounded-lg outline-none
+                focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
+            />
+          </div>
+          <button
+            onClick={() => setRegexMode((p) => !p)}
+            title="Toggle Regex"
+            className={`px-1.5 py-1 text-[11px] font-mono font-bold rounded-md border cursor-pointer
+              transition-all duration-100 shrink-0
+              ${regexMode
+                ? "bg-brand-600 text-white border-brand-500"
+                : "bg-surface-200 text-surface-500 border-surface-300/60 hover:text-surface-700"
+              }`}
+          >
+            .*
+          </button>
+        </div>
+      </div>
+
+      {/* Replace input */}
+      <div className="px-2 pb-2 flex items-center gap-1">
+        <button
+          onClick={() => setShowReplace((p) => !p)}
+          title="Toggle Replace"
+          className={`p-1 rounded-md border cursor-pointer transition-all duration-100 shrink-0
+            ${showReplace
+              ? "bg-brand-600/20 text-brand-400 border-brand-500/30"
+              : "bg-transparent text-surface-500 border-transparent hover:text-surface-700"
+            }`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            className={`transition-transform duration-200 ${showReplace ? "rotate-180" : ""}`}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        {showReplace && (
+          <div className="flex-1 flex items-center gap-1">
+            <input
+              type="text"
+              value={replaceQuery}
+              onChange={(e) => setReplaceQuery(e.target.value)}
+              placeholder="Replace with..."
+              className="flex-1 py-1.5 px-2 text-[13px] font-sans bg-surface-200 text-surface-800
+                border border-surface-300/60 rounded-lg outline-none
+                focus:border-brand-500/50 transition-colors duration-100 placeholder:text-surface-500"
+            />
+            <button
+              onClick={handleReplaceAll}
+              disabled={replacing || !searchedQuery}
+              title="Replace All"
+              className={`px-2 py-1 text-[11px] font-medium rounded-md border cursor-pointer shrink-0
+                transition-all duration-100
+                ${replacing || !searchedQuery
+                  ? "bg-surface-300 text-surface-500 border-surface-300/60 cursor-not-allowed"
+                  : "bg-accent-orange/20 text-accent-orange border-accent-orange/30 hover:bg-accent-orange/30"
+                }`}
+            >
+              {replacing ? "..." : "All"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Status line */}
       {searchedQuery && (
-        <div
-          style={{
-            padding: "2px 12px 6px",
-            fontSize: 11,
-            color: "#808080",
-            fontFamily: "system-ui, sans-serif",
-          }}
-        >
+        <div className="px-3 pb-1.5 text-[11px] text-surface-500 font-sans">
           {totalMatches} result{totalMatches !== 1 ? "s" : ""} in{" "}
           {results.length} file{results.length !== 1 ? "s" : ""}
         </div>
       )}
 
       {/* Results */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {searching && (
-          <div
-            style={{
-              padding: "16px 12px",
-              color: "#808080",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-            }}
-          >
+          <div className="px-3 py-4 text-surface-500 text-xs font-sans flex items-center gap-2">
+            <span className="w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             Searching...
           </div>
         )}
 
         {!searching && searchedQuery && results.length === 0 && (
-          <div
-            style={{
-              padding: "16px 12px",
-              color: "#808080",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-            }}
-          >
+          <div className="px-3 py-4 text-surface-500 text-xs font-sans">
             No results found for &quot;{searchedQuery}&quot;
           </div>
         )}
@@ -248,84 +281,37 @@ export function GlobalSearch({
           const fileName = group.filePath.split("/").pop() ?? group.filePath;
           return (
             <div key={group.filePath}>
-              {/* File header */}
               <div
                 onClick={() => toggleFileCollapse(group.filePath)}
-                style={{
-                  padding: "4px 8px",
-                  fontSize: 12,
-                  fontFamily: "system-ui, sans-serif",
-                  color: "#d4d4d4",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  backgroundColor: "#2d2d2d",
-                  userSelect: "none",
-                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-sans text-surface-800
+                  cursor-pointer bg-surface-200 select-none hover:bg-surface-300/50 transition-colors duration-75"
               >
-                <span style={{ fontSize: 10, width: 12, textAlign: "center" }}>
-                  {isCollapsed ? "▸" : "▾"}
-                </span>
-                <span style={{ fontWeight: 600 }}>{fileName}</span>
-                <span style={{ color: "#808080", marginLeft: 4 }}>
-                  {group.filePath}
-                </span>
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    color: "#808080",
-                    fontSize: 11,
-                    backgroundColor: "#404040",
-                    padding: "0 6px",
-                    borderRadius: 8,
-                  }}
-                >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                  className={`text-surface-500 transition-transform duration-100 ${isCollapsed ? "-rotate-90" : ""}`}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+                <span className="font-semibold">{fileName}</span>
+                <span className="text-surface-500 ml-1">{group.filePath}</span>
+                <span className="ml-auto text-surface-500 text-[11px] bg-surface-300 px-1.5 rounded-full">
                   {group.matches.length}
                 </span>
               </div>
 
-              {/* Matches */}
               {!isCollapsed &&
                 group.matches.map((match, idx) => (
                   <div
                     key={`${match.filePath}:${match.line}:${idx}`}
                     onClick={() => onResultSelect(match.filePath, match.line)}
-                    style={{
-                      padding: "2px 8px 2px 28px",
-                      fontSize: 12,
-                      fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-                      color: "#d4d4d4",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#2a2d2e";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
+                    className="py-0.5 pr-2 pl-7 text-xs font-mono text-surface-800 cursor-pointer
+                      whitespace-nowrap overflow-hidden text-ellipsis
+                      hover:bg-surface-200 transition-colors duration-75"
                   >
-                    <span style={{ color: "#808080", marginRight: 8 }}>
-                      {match.line}
-                    </span>
-                    <span>
-                      {match.content.substring(0, match.matchStart)}
-                    </span>
-                    <span
-                      style={{
-                        backgroundColor: "#613214",
-                        color: "#e8b054",
-                        borderRadius: 2,
-                      }}
-                    >
+                    <span className="text-surface-500 mr-2">{match.line}</span>
+                    <span>{match.content.substring(0, match.matchStart)}</span>
+                    <span className="bg-amber-500/20 text-amber-400 rounded-sm">
                       {match.content.substring(match.matchStart, match.matchEnd)}
                     </span>
-                    <span>
-                      {match.content.substring(match.matchEnd)}
-                    </span>
+                    <span>{match.content.substring(match.matchEnd)}</span>
                   </div>
                 ))}
             </div>

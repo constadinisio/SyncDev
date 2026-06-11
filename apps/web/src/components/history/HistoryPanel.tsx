@@ -68,7 +68,6 @@ export function HistoryPanel({
     }
   }, [projectId, filePath]);
 
-  // Poll every 5 seconds while the panel is open
   useEffect(() => {
     fetchHistory();
     const interval = setInterval(fetchHistory, 5000);
@@ -76,159 +75,65 @@ export function HistoryPanel({
   }, [fetchHistory]);
 
   return (
-    <div
-      style={{
-        width: 280,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderLeft: "1px solid #404040",
-        backgroundColor: "#1e1e1e",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
+    <div className="w-[280px] shrink-0 flex flex-col border-l border-surface-300/40 bg-surface-100 font-sans">
       {/* Header */}
-      <div
-        style={{
-          height: 36,
-          backgroundColor: "#252526",
-          borderBottom: "1px solid #404040",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 12px",
-          flexShrink: 0,
-        }}
-      >
-        <span style={{ color: "#d4d4d4", fontSize: 13, fontWeight: 500 }}>
-          History
-        </span>
+      <div className="h-9 bg-surface-150 border-b border-surface-300/40 flex items-center justify-between px-3 shrink-0">
+        <span className="text-surface-800 text-[13px] font-medium">History</span>
         <button
           onClick={onClose}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#808080",
-            cursor: "pointer",
-            fontSize: 18,
-            lineHeight: 1,
-            padding: "2px 4px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#d4d4d4";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#808080";
-          }}
+          className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            p-1 rounded transition-colors duration-100"
         >
-          x
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
       {/* Content */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: 8,
-        }}
-      >
+      <div className="flex-1 overflow-y-auto p-2">
         {!filePath && (
-          <div
-            style={{
-              color: "#808080",
-              fontSize: 12,
-              textAlign: "center",
-              marginTop: 24,
-            }}
-          >
+          <div className="text-surface-500 text-xs text-center mt-6">
             Open a file to see its history.
           </div>
         )}
 
         {filePath && loading && entries.length === 0 && (
-          <div
-            style={{
-              color: "#808080",
-              fontSize: 12,
-              textAlign: "center",
-              marginTop: 24,
-            }}
-          >
+          <div className="text-surface-500 text-xs text-center mt-6 flex items-center justify-center gap-2">
+            <span className="w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
             Loading...
           </div>
         )}
 
         {filePath && error && (
-          <div
-            style={{
-              color: "#f14c4c",
-              fontSize: 12,
-              textAlign: "center",
-              marginTop: 24,
-            }}
-          >
+          <div className="text-accent-red text-xs text-center mt-6">
             {error}
           </div>
         )}
 
         {filePath && !loading && !error && entries.length === 0 && (
-          <div
-            style={{
-              color: "#808080",
-              fontSize: 12,
-              textAlign: "center",
-              marginTop: 24,
-            }}
-          >
+          <div className="text-surface-500 text-xs text-center mt-6">
             No edits recorded yet.
           </div>
         )}
 
         {entries.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            <div
-              style={{
-                color: "#808080",
-                fontSize: 11,
-                marginBottom: 4,
-                padding: "0 4px",
-              }}
-            >
+          <div className="flex flex-col gap-1">
+            <div className="text-surface-500 text-[11px] mb-1 px-1">
               {filePath}
             </div>
             {entries.map((entry, idx) => (
               <div
                 key={`${entry.timestamp}-${idx}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "4px 8px",
-                  borderRadius: 3,
-                  fontSize: 12,
-                }}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs hover:bg-surface-200
+                  transition-colors duration-75"
               >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    backgroundColor: "#0e639c",
-                    flexShrink: 0,
-                  }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: "#d4d4d4" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-surface-800">
                     {entry.user} edited
                   </div>
-                  <div style={{ color: "#6a6a6a", fontSize: 11 }}>
+                  <div className="text-surface-500 text-[11px]">
                     {formatDate(entry.timestamp)} {formatTime(entry.timestamp)}
                   </div>
                 </div>

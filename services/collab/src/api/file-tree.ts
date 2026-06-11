@@ -5,9 +5,17 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  unlinkSync,
+  rmSync,
 } from "fs";
 import { join } from "path";
 import { log, logError } from "../lib/logger.js";
+import { deleteSnapshot } from "../persistence/snapshot-store.js";
+import { getRooms } from "../rooms/room-manager.js";
+import { destroyRoom } from "../rooms/room.js";
+
+const WORKSPACE_BASE =
+  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 const PROJECTS_DIR = process.env.PROJECTS_DIR ?? "./storage/projects";
 
@@ -125,6 +133,19 @@ export function createNode(
   return updated;
 }
 
+function collectAllPaths(nodes: readonly TreeNode[], prefix: string): string[] {
+  const paths: string[] = [];
+  for (const node of nodes) {
+    const p = prefix ? `${prefix}/${node.name}` : node.name;
+    if (node.type === "file") {
+      paths.push(p);
+    } else {
+      paths.push(...collectAllPaths(node.children, p));
+    }
+  }
+  return paths;
+}
+
 export function deleteNode(projectId: string, path: string): ProjectTree {
   const project = loadProjectTree(projectId);
   const tree = structuredClone(project.tree) as TreeNode[];
@@ -134,8 +155,55 @@ export function deleteNode(projectId: string, path: string): ProjectTree {
   if (!parent || !name) return { projectId, tree };
 
   const idx = parent.findIndex((n) => n.name === name);
-  if (idx !== -1) {
-    parent.splice(idx, 1);
+  if (idx === -1) return { projectId, tree };
+
+  const deletedNode = parent[idx];
+  parent.splice(idx, 1);
+
+  // Collect all file paths that were deleted (for cleanup)
+  const deletedPaths = deletedNode.type === "file"
+    ? [path]
+    : collectAllPaths([deletedNode], path.substring(0, path.lastIndexOf("/") + 0) ? path.substring(0, path.length - name.length) : "").map(
+        (p) => {
+          const base = path.substring(0, path.length - name.length);
+          return base ? `${base}${p}` : p;
+        },
+      );
+
+  // Actually, simpler: if it's a folder, collect paths from it
+  const pathsToClean = deletedNode.type === "file"
+    ? [path]
+    : collectAllPaths([deletedNode], path);
+
+  // Clean up Yjs rooms and snapshots for deleted files
+  const rooms = getRooms();
+  for (const filePath of pathsToClean) {
+    const roomId = `${projectId}::${filePath}`;
+    // Delete snapshot
+    deleteSnapshot(roomId);
+    // Destroy active room if any
+    const room = rooms.get(roomId);
+    if (room) {
+      destroyRoom(room);
+      (rooms as Map<string, unknown>).delete(roomId);
+      log("file-tree", `destroyed room "${roomId}" after file deletion`);
+    }
+  }
+
+  // Delete from disk
+  const safeProjectId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const diskPath = join(WORKSPACE_BASE, safeProjectId, path);
+  if (existsSync(diskPath)) {
+    try {
+      if (deletedNode.type === "folder") {
+        rmSync(diskPath, { recursive: true, force: true });
+      } else {
+        unlinkSync(diskPath);
+      }
+      log("file-tree", `deleted from disk: "${diskPath}"`);
+    } catch (err) {
+      logError("file-tree", `failed to delete from disk: "${diskPath}"`, err);
+    }
   }
 
   const updated = { projectId, tree };

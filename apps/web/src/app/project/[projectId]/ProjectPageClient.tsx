@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { FileExplorer } from "@/components/explorer/FileExplorer";
-import { CollaborativeEditor } from "@/components/editor/CollaborativeEditor";
+import { CollaborativeEditor } from "@/components/editor/LazyCollaborativeEditor";
+import { ImagePreview } from "@/components/editor/ImagePreview";
+import { BinaryPreview } from "@/components/editor/BinaryPreview";
 import { ConnectionStatus } from "@/components/editor/ConnectionStatus";
 import { TabBar } from "@/components/editor/TabBar";
 import { StatusBar } from "@/components/editor/StatusBar";
@@ -33,23 +35,24 @@ import {
   executeTerminalCommand,
   scanWorkspace,
   createProject,
+  isImageExtension,
+  isBinaryExtension,
 } from "@/lib/api";
 import type { TreeNode, ProjectTree } from "@/lib/api";
 import type { EditorSettings } from "@/hooks/useSettings";
 import { PROJECT_TEMPLATES } from "@/lib/templates";
 import type { ProjectTemplate } from "@/lib/templates";
 import { SetupProgress } from "@/components/templates/SetupProgress";
+import { KeyboardShortcuts } from "@/components/editor/KeyboardShortcuts";
+import { DiffViewer } from "@/components/editor/DiffViewer";
+import { useTheme } from "@/hooks/useTheme";
+import { useProjectPresence, type UserPresence } from "@/hooks/useProjectPresence";
+import { FollowBar } from "@/components/presence/FollowBar";
 import { useSearchParams, useRouter } from "next/navigation";
 
 const COLORS = [
-  "#e06c75",
-  "#61afef",
-  "#98c379",
-  "#e5c07b",
-  "#c678dd",
-  "#56b6c2",
-  "#d19a66",
-  "#be5046",
+  "#f87171", "#60a5fa", "#4ade80", "#facc15",
+  "#a78bfa", "#22d3ee", "#fb923c", "#f472b6",
 ];
 
 function pickColor(name: string): string {
@@ -94,14 +97,25 @@ function EditorPanel({
   onMarkersChange?: (markers: readonly ProblemEntry[]) => void;
   settings?: EditorSettings;
 }) {
+  const fileName = filePath.split("/").pop() ?? filePath;
+  const isImage = isImageExtension(fileName);
+  const isBinary = isBinaryExtension(fileName);
+
   const roomId = `${projectId}::${filePath}`;
   const connection = useYjsConnection(roomId);
   const users = useAwareness(connection?.provider ?? null, userName);
-  const fileName = filePath.split("/").pop() ?? filePath;
   const commentLines = useCommentLines(connection?.doc ?? null);
   const [glyphClickLine, setGlyphClickLine] = useState<number | null>(null);
   const isMarkdown = fileName.endsWith(".md");
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
+
+  // For binary/image files, show preview instead of editor
+  if (isImage) {
+    return <ImagePreview projectId={projectId} filePath={filePath} fileName={fileName} />;
+  }
+  if (isBinary) {
+    return <BinaryPreview projectId={projectId} filePath={filePath} fileName={fileName} />;
+  }
 
   const userColor = userName ? pickColor(userName) : "#808080";
 
@@ -118,47 +132,31 @@ function EditorPanel({
     : "";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <div className="flex-1 flex flex-col">
       {/* Editor toolbar */}
-      <div
-        style={{
-          padding: "6px 16px",
-          backgroundColor: "#1e1e1e",
-          borderBottom: "1px solid #404040",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontFamily: "system-ui, sans-serif",
-          fontSize: 13,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#d4d4d4" }}>{filePath}</span>
+      <div className="px-4 py-1.5 bg-surface-100 border-b border-surface-300/40 flex justify-between items-center font-sans text-[13px]">
+        <div className="flex items-center gap-2">
+          <span className="text-surface-800 font-medium">{filePath}</span>
           {isMarkdown && (
             <button
               onClick={() => setShowMarkdownPreview((prev) => !prev)}
-              style={{
-                padding: "2px 8px",
-                fontSize: 11,
-                backgroundColor: showMarkdownPreview ? "#0e639c" : "#2d2d2d",
-                color: "#d4d4d4",
-                border: "1px solid #555",
-                borderRadius: 3,
-                cursor: "pointer",
-                fontFamily: "system-ui, sans-serif",
-              }}
+              className={`px-2.5 py-0.5 text-[11px] rounded-md border cursor-pointer transition-colors duration-100
+                ${showMarkdownPreview
+                  ? "bg-brand-600 text-white border-brand-500"
+                  : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300"
+                }`}
             >
               {showMarkdownPreview ? "Editor" : "Preview"}
             </button>
           )}
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="flex gap-3 items-center">
           <UserList users={users} />
           {connection && <ConnectionStatus status={connection.status} />}
         </div>
       </div>
       {/* Editor + Comment overlay */}
-      <div style={{ flex: 1, position: "relative" }}>
+      <div className="flex-1 relative">
         {connection ? (
           <>
             {isMarkdown && showMarkdownPreview ? (
@@ -175,16 +173,8 @@ function EditorPanel({
                 settings={settings}
               />
             )}
-            {/* Comment thread panel (floating over the editor) */}
             {glyphClickLine !== null && !showMarkdownPreview && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 40,
-                  right: 16,
-                  zIndex: 100,
-                }}
-              >
+              <div className="absolute top-10 right-4 z-[100]">
                 <CommentGutter
                   doc={connection.doc}
                   userName={userName}
@@ -196,13 +186,11 @@ function EditorPanel({
             )}
           </>
         ) : (
-          <div
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              height: "100%", backgroundColor: "#1e1e1e", color: "#808080",
-            }}
-          >
-            Connecting...
+          <div className="flex items-center justify-center h-full bg-surface-100 text-surface-500">
+            <div className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              Connecting...
+            </div>
           </div>
         )}
       </div>
@@ -224,6 +212,7 @@ function EditorPaneContent({
   userName,
   onMarkersChange,
   settings,
+  onTabReorder,
 }: {
   projectId: string;
   activeTab: string | null;
@@ -238,79 +227,51 @@ function EditorPaneContent({
   userName: string;
   onMarkersChange?: (markers: readonly ProblemEntry[]) => void;
   settings?: EditorSettings;
+  onTabReorder?: (from: number, to: number) => void;
 }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+    <div className="flex-1 flex flex-col min-w-0">
       {/* Tab bar with split controls */}
-      <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex items-center shrink-0">
+        <div className="flex-1 min-w-0">
           <TabBar
             openTabs={openTabs}
             activeTab={activeTab}
             onTabSelect={onTabSelect}
             onTabClose={onTabClose}
+            onTabReorder={onTabReorder}
           />
         </div>
         {/* Split/Unsplit button */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            backgroundColor: "#252526",
-            borderBottom: "1px solid #404040",
-            padding: "0 4px",
-            height: openTabs.length > 0 ? 35 : 0,
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
-          {!splitMode && onSplitRight && openTabs.length > 0 && (
-            <button
-              onClick={onSplitRight}
-              title="Split Right"
-              style={{
-                background: "none",
-                border: "none",
-                color: "#808080",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "2px 6px",
-                fontFamily: "system-ui, sans-serif",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#808080";
-              }}
-            >
-              &#x2502;&#x2502;
-            </button>
-          )}
-          {isRightPane && onUnsplit && (
-            <button
-              onClick={onUnsplit}
-              title="Close Split"
-              style={{
-                background: "none",
-                border: "none",
-                color: "#808080",
-                cursor: "pointer",
-                fontSize: 16,
-                padding: "2px 6px",
-                lineHeight: 1,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#808080";
-              }}
-            >
-              ×
-            </button>
-          )}
-        </div>
+        {openTabs.length > 0 && (
+          <div className="flex items-center bg-surface-150 border-b border-surface-300/60 px-1 h-[37px] shrink-0">
+            {!splitMode && onSplitRight && (
+              <button
+                onClick={onSplitRight}
+                title="Split Right"
+                className="bg-transparent border-none text-surface-500 hover:text-surface-800
+                  cursor-pointer p-1 rounded transition-colors duration-100"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="12" y1="3" x2="12" y2="21"/>
+                </svg>
+              </button>
+            )}
+            {isRightPane && onUnsplit && (
+              <button
+                onClick={onUnsplit}
+                title="Close Split"
+                className="bg-transparent border-none text-surface-500 hover:text-surface-800
+                  cursor-pointer p-1 rounded transition-colors duration-100"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Breadcrumbs */}
@@ -330,18 +291,13 @@ function EditorPaneContent({
           settings={settings}
         />
       ) : (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#808080",
-            fontFamily: "system-ui, sans-serif",
-            fontSize: 14,
-          }}
-        >
-          Select a file to start editing
+        <div className="flex-1 flex flex-col items-center justify-center text-surface-500 font-sans text-sm gap-3 bg-surface-100">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-surface-300">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span>Select a file to start editing</span>
+          <span className="text-xs text-surface-400">Ctrl+P to quick open</span>
         </div>
       )}
     </div>
@@ -375,17 +331,14 @@ function useTemplateSetup(
     const template = PROJECT_TEMPLATES.find((t) => t.id === templateId);
     if (!template) return;
 
-    // Only run setup for non-empty trees skip
     setSetupStarted(true);
     setSetupTemplate(template);
 
     const runSetup = async () => {
       try {
-        // Ensure the project exists
         await createProject(decodedProjectId);
 
         if (template.files && template.files.length > 0) {
-          // File-based template
           const steps: SetupStepState[] = [
             { label: "Creating files...", status: "running" },
           ];
@@ -398,7 +351,6 @@ function useTemplateSetup(
           onTreeUpdate(updatedTree);
           setSetupDone(true);
         } else if (template.commands && template.commands.length > 0) {
-          // Command-based template
           const initialSteps: SetupStepState[] = template.commands.map(
             (cmd, i) => ({
               label: i === 0 ? "Installing dependencies..." : `Running: ${cmd.substring(0, 60)}...`,
@@ -411,7 +363,6 @@ function useTemplateSetup(
           };
           setSetupSteps([...initialSteps, scanStep]);
 
-          // Execute commands sequentially
           for (let i = 0; i < template.commands.length; i++) {
             const cmd = template.commands[i];
             setSetupSteps((prev) =>
@@ -442,7 +393,6 @@ function useTemplateSetup(
             );
           }
 
-          // Scan workspace
           const scanIdx = template.commands.length;
           setSetupSteps((prev) =>
             prev.map((s, idx) =>
@@ -460,7 +410,6 @@ function useTemplateSetup(
           );
           setSetupDone(true);
         } else {
-          // Empty template with no files/commands
           setSetupDone(true);
         }
       } catch (err) {
@@ -475,7 +424,6 @@ function useTemplateSetup(
 
   const dismissSetup = useCallback(() => {
     setSetupTemplate(null);
-    // Remove template param from URL
     router.replace(`/project/${encodeURIComponent(decodedProjectId)}`);
   }, [router, decodedProjectId]);
 
@@ -488,6 +436,62 @@ function useTemplateSetup(
   };
 }
 
+// Activity bar icon component
+function ActivityBarIcon({
+  active,
+  title,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`w-10 h-10 flex items-center justify-center border-none cursor-pointer rounded-lg
+        transition-all duration-100
+        ${active
+          ? "bg-surface-300/50 text-surface-900 border-l-2 border-l-brand-500"
+          : "bg-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-300/30"
+        }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Toolbar button component
+function ToolbarButton({
+  active,
+  onClick,
+  title,
+  children,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`px-3 py-1.5 text-xs font-medium rounded-md border cursor-pointer
+        transition-all duration-100
+        ${active
+          ? "bg-brand-600 text-white border-brand-500 shadow-sm shadow-brand-600/20"
+          : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
+        }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function ProjectPage({
   params,
 }: {
@@ -496,10 +500,11 @@ export default function ProjectPage({
   const { projectId } = params;
   const decodedProjectId = decodeURIComponent(projectId);
 
-  // Settings & session hooks
   const [editorSettings, setEditorSettings] = useSettings();
   const { session, updateSession, loaded: sessionLoaded } = useSession(decodedProjectId);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
@@ -510,7 +515,6 @@ export default function ProjectPage({
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
 
-  // Phase B state
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("explorer");
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalHeight, setTerminalHeight] = useState(200);
@@ -519,7 +523,6 @@ export default function ProjectPage({
   const [rightActiveTab, setRightActiveTab] = useState<string | null>(null);
   const [splitRatio, setSplitRatio] = useState(0.5);
 
-  // Restore session on load
   const [sessionRestored, setSessionRestored] = useState(false);
   useEffect(() => {
     if (sessionLoaded && !sessionRestored) {
@@ -533,7 +536,6 @@ export default function ProjectPage({
     }
   }, [sessionLoaded, sessionRestored, session]);
 
-  // Auto-save session whenever relevant state changes
   useEffect(() => {
     if (!sessionRestored) return;
     updateSession({
@@ -546,18 +548,17 @@ export default function ProjectPage({
     });
   }, [openTabs, activeTab, sidebarWidth, terminalOpen, terminalHeight, splitMode, sessionRestored, updateSession]);
 
-  // Phase C state
   const [userName, setUserName] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // Phase D state
   const [problems, setProblems] = useState<readonly ProblemEntry[]>([]);
   const [problemsOpen, setProblemsOpen] = useState(false);
   const [problemsHeight, setProblemsHeight] = useState(150);
   const [diffModal, setDiffModal] = useState<{
     filePath: string;
-    diff: string;
+    original: string;
+    modified: string;
   } | null>(null);
 
   const handleMarkersChange = useCallback(
@@ -568,17 +569,21 @@ export default function ProjectPage({
   );
 
   const handleShowDiff = useCallback(
-    (filePath: string, diff: string) => {
-      setDiffModal({ filePath, diff });
+    async (filePath: string, _diff: string) => {
+      const { gitShowFile } = await import("@/lib/git-api");
+      const original = await gitShowFile(decodedProjectId, filePath).catch(() => "");
+      // Get the working tree content via terminal cat
+      const result = await executeTerminalCommand(decodedProjectId, `cat "${filePath}"`).catch(() => ({ stdout: "", stderr: "", exitCode: 1 }));
+      const modified = result.stdout;
+      setDiffModal({ filePath, original, modified });
     },
-    [],
+    [decodedProjectId],
   );
 
   const handleProblemsResize = useCallback((newHeight: number) => {
     setProblemsHeight(newHeight);
   }, []);
 
-  // Check localStorage for username on mount
   useEffect(() => {
     const stored = getStoredUserName();
     if (stored) {
@@ -587,10 +592,41 @@ export default function ProjectPage({
   }, []);
 
   const userColor = userName ? pickColor(userName) : "#808080";
+  const cursorLine = cursorPosition?.line ?? null;
+  const otherUsers = useProjectPresence(decodedProjectId, userName, userColor, activeTab, cursorLine);
+  const [followingUser, setFollowingUser] = useState<string | null>(null);
 
-  // Load project tree + poll every 2s for changes from other users
+  // Follow mode: when following a user, switch to their active file
+  const followedUser = followingUser
+    ? otherUsers.find((u) => u.name === followingUser) ?? null
+    : null;
+
+  useEffect(() => {
+    if (!followedUser?.activeFile) return;
+    if (followedUser.activeFile !== activeTab) {
+      handleFileSelect(followedUser.activeFile);
+    }
+  }, [followedUser?.activeFile]);
+
   useEffect(() => {
     let cancelled = false;
+
+    // If arriving from a clone (?scan=1), trigger a workspace scan first
+    const params = new URLSearchParams(window.location.search);
+    const needsScan = params.get("scan") === "1";
+
+    const init = async () => {
+      if (needsScan) {
+        try {
+          const scanned = await scanWorkspace(decodedProjectId);
+          if (!cancelled) setTree(scanned.tree);
+          // Remove the scan param from URL
+          window.history.replaceState({}, "", window.location.pathname);
+        } catch (err) {
+          console.error("Scan failed:", err);
+        }
+      }
+    };
 
     const poll = () => {
       fetchProjectTree(decodedProjectId)
@@ -600,7 +636,7 @@ export default function ProjectPage({
         .catch(console.error);
     };
 
-    poll();
+    init().then(poll);
     const interval = setInterval(poll, 2000);
     return () => {
       cancelled = true;
@@ -612,7 +648,6 @@ export default function ProjectPage({
     setTree(updated.tree);
   }, []);
 
-  // Template setup
   const {
     setupTemplate,
     setupSteps,
@@ -660,8 +695,16 @@ export default function ProjectPage({
     });
   }, []);
 
+  const handleTabReorder = useCallback((from: number, to: number) => {
+    setOpenTabs((prev) => {
+      const updated = [...prev];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      return updated;
+    });
+  }, []);
+
   const handleDeleteFile = useCallback((path: string) => {
-    // Close tab if the deleted file (or any file under a deleted folder) is open
     setOpenTabs((prev) => {
       const updated = prev.filter(
         (t) => t !== path && !t.startsWith(path + "/"),
@@ -676,7 +719,6 @@ export default function ProjectPage({
       });
       return updated;
     });
-    // Also close in right pane
     setRightPaneTabs((prev) => {
       const updated = prev.filter(
         (t) => t !== path && !t.startsWith(path + "/"),
@@ -699,7 +741,6 @@ export default function ProjectPage({
 
   const handleSplitRight = useCallback(() => {
     setSplitMode(true);
-    // If there's an active tab, also open it in the right pane
     if (activeTab) {
       setRightPaneTabs((prev) =>
         prev.includes(activeTab) ? prev : [...prev, activeTab],
@@ -718,13 +759,10 @@ export default function ProjectPage({
     (filePath: string, _line: number) => {
       handleFileSelect(filePath);
       setSidebarMode("explorer");
-      // Note: line positioning would require Monaco API integration
-      // which would need ref forwarding through EditorPanel
     },
     [handleFileSelect],
   );
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -767,6 +805,11 @@ export default function ProjectPage({
         e.preventDefault();
         setTerminalOpen((prev) => !prev);
       }
+
+      if (e.key === "/" && mod) {
+        e.preventDefault();
+        setShortcutsOpen((prev) => !prev);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -803,106 +846,94 @@ export default function ProjectPage({
     setTerminalHeight(newHeight);
   }, []);
 
+  const handleTerminalCommandComplete = useCallback(() => {
+    // Re-fetch the tree after a terminal command to pick up file changes
+    fetchProjectTree(decodedProjectId)
+      .then((data) => setTree(data.tree))
+      .catch(console.error);
+  }, [decodedProjectId]);
+
   const activeFileName = activeTab?.split("/").pop() ?? "";
   const activeLanguage = activeTab ? inferLanguage(activeFileName) : "plaintext";
 
-  // Show username prompt if no name is stored
   if (userName === null) {
     return (
-      <div style={{ height: "100vh", backgroundColor: "#1e1e1e" }}>
+      <div className="h-screen bg-surface-0">
         <UserNamePrompt onSubmit={setUserName} />
       </div>
     );
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#1e1e1e" }}>
+    <div className="h-screen flex flex-col bg-surface-100">
       {/* Top bar */}
-      <div
-        style={{
-          height: 36,
-          backgroundColor: "#333333",
-          borderBottom: "1px solid #404040",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 12px",
-          flexShrink: 0,
-          fontFamily: "system-ui, sans-serif",
-          fontSize: 13,
-        }}
-      >
-        <span style={{ color: "#d4d4d4", fontWeight: 500 }}>{decodedProjectId}</span>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {/* Terminal toggle button */}
-          <button
+      <div className="h-10 bg-surface-0 border-b border-surface-300/40 flex items-center justify-between px-3 shrink-0 font-sans text-[13px]">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </div>
+            <span className="text-surface-900 font-semibold">{decodedProjectId}</span>
+          </div>
+          {/* Online users — click to follow */}
+          {otherUsers.length > 0 && (
+            <div className="flex gap-1 items-center ml-4">
+              {otherUsers.map((u) => (
+                <button
+                  key={u.name}
+                  onClick={() => setFollowingUser((prev) => prev === u.name ? null : u.name)}
+                  title={followingUser === u.name ? `Stop following ${u.name}` : `Follow ${u.name}`}
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium cursor-pointer
+                    border transition-all duration-100
+                    ${followingUser === u.name
+                      ? "ring-2 ring-offset-1 ring-offset-surface-0"
+                      : "hover:scale-105"
+                    }`}
+                  style={{
+                    color: u.color,
+                    backgroundColor: `${u.color}15`,
+                    borderColor: `${u.color}30`,
+                    ...(followingUser === u.name ? { ringColor: u.color } : {}),
+                  }}
+                >
+                  {followingUser === u.name ? `Following ${u.name}` : u.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 items-center">
+          <ToolbarButton
+            active={terminalOpen}
             onClick={() => setTerminalOpen((prev) => !prev)}
             title="Toggle Terminal (Ctrl+`)"
-            style={{
-              padding: "3px 10px",
-              fontSize: 12,
-              backgroundColor: terminalOpen ? "#0e639c" : "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-            }}
           >
             Terminal
-          </button>
-          {/* Chat toggle button */}
-          <button
+          </ToolbarButton>
+          <ToolbarButton
+            active={chatOpen}
             onClick={() => setChatOpen((prev) => !prev)}
             title="Toggle Chat"
-            style={{
-              padding: "3px 10px",
-              fontSize: 12,
-              backgroundColor: chatOpen ? "#0e639c" : "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-            }}
           >
             Chat
-          </button>
-          {/* History toggle button */}
-          <button
+          </ToolbarButton>
+          <ToolbarButton
+            active={historyOpen}
             onClick={() => setHistoryOpen((prev) => !prev)}
             title="Toggle History"
-            style={{
-              padding: "3px 10px",
-              fontSize: 12,
-              backgroundColor: historyOpen ? "#0e639c" : "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-            }}
           >
             History
-          </button>
+          </ToolbarButton>
           {previewOpen && previewUrl && (
-            <button
-              onClick={() => window.open(previewUrl, "_blank")}
-              title="Open in new tab"
-              style={{
-                padding: "3px 10px",
-                fontSize: 12,
-                backgroundColor: "transparent",
-                color: "#808080",
-                border: "1px solid #555",
-                borderRadius: 3,
-                cursor: "pointer",
-              }}
-            >
+            <ToolbarButton onClick={() => window.open(previewUrl, "_blank")} title="Open in new tab">
               Open in tab
-            </button>
+            </ToolbarButton>
           )}
-          <button
+          <ToolbarButton
+            active={previewOpen}
             onClick={() => {
               if (previewOpen) {
                 setPreviewOpen(false);
@@ -910,157 +941,95 @@ export default function ProjectPage({
                 handleOpenPreview();
               }
             }}
-            style={{
-              padding: "3px 12px",
-              fontSize: 12,
-              backgroundColor: previewOpen ? "#0e639c" : "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-            }}
           >
             {previewOpen ? "Close Preview" : "Live Preview"}
-          </button>
-          {/* Download ZIP button */}
+          </ToolbarButton>
           <a
             href={`${getApiBase()}/api/download/${encodeURIComponent(decodedProjectId)}`}
             download
-            style={{
-              padding: "3px 10px",
-              fontSize: 12,
-              backgroundColor: "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
+            className="px-3 py-1.5 text-xs font-medium rounded-md border bg-surface-200 text-surface-700
+              border-surface-300/60 hover:bg-surface-300 hover:text-surface-800 no-underline
+              inline-flex items-center transition-colors duration-100 cursor-pointer"
           >
-            Download ZIP
+            Download
           </a>
-          {/* Settings gear button */}
+          <button
+            onClick={toggleTheme}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            className="p-1.5 rounded-md border bg-surface-200 text-surface-600
+              border-surface-300/60 hover:bg-surface-300 hover:text-surface-800
+              cursor-pointer transition-all duration-100"
+          >
+            {theme === "dark" ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
+          </button>
           <button
             onClick={() => setSettingsOpen(true)}
             title="Settings"
-            style={{
-              padding: "3px 10px",
-              fontSize: 14,
-              backgroundColor: settingsOpen ? "#0e639c" : "#2d2d2d",
-              color: "#d4d4d4",
-              border: "1px solid #555",
-              borderRadius: 3,
-              cursor: "pointer",
-              lineHeight: 1,
-            }}
+            className={`p-1.5 rounded-md border cursor-pointer transition-all duration-100
+              ${settingsOpen
+                ? "bg-brand-600 text-white border-brand-500"
+                : "bg-surface-200 text-surface-600 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
+              }`}
           >
-            &#x2699;
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
           </button>
         </div>
       </div>
 
+      {/* Follow bar */}
+      {followedUser && (
+        <FollowBar
+          following={followedUser}
+          onUnfollow={() => setFollowingUser(null)}
+        />
+      )}
+
       {/* Main content */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Activity bar + Sidebar */}
-        <div style={{ display: "flex", height: "100%", flexShrink: 0 }}>
+        <div className="flex h-full shrink-0">
           {/* Activity bar icons */}
-          <div
-            style={{
-              width: 48,
-              backgroundColor: "#333333",
-              borderRight: "1px solid #404040",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              paddingTop: 4,
-              gap: 2,
-              flexShrink: 0,
-            }}
-          >
-            {/* Explorer icon */}
-            <button
+          <div className="w-12 bg-surface-0 border-r border-surface-300/40 flex flex-col items-center pt-1 gap-1 shrink-0">
+            <ActivityBarIcon
+              active={sidebarMode === "explorer"}
               onClick={() => setSidebarMode("explorer")}
-              title="Explorer (Ctrl+Shift+E)"
-              style={{
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "none",
-                border: "none",
-                borderLeft: sidebarMode === "explorer" ? "2px solid #d4d4d4" : "2px solid transparent",
-                color: sidebarMode === "explorer" ? "#d4d4d4" : "#808080",
-                cursor: "pointer",
-                fontSize: 18,
-              }}
-              onMouseEnter={(e) => {
-                if (sidebarMode !== "explorer") e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                if (sidebarMode !== "explorer") e.currentTarget.style.color = "#808080";
-              }}
+              title="Explorer"
             >
-              &#x1F4C1;
-            </button>
-            {/* Search icon */}
-            <button
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </ActivityBarIcon>
+            <ActivityBarIcon
+              active={sidebarMode === "search"}
               onClick={() => setSidebarMode("search")}
               title="Search (Ctrl+Shift+F)"
-              style={{
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "none",
-                border: "none",
-                borderLeft: sidebarMode === "search" ? "2px solid #d4d4d4" : "2px solid transparent",
-                color: sidebarMode === "search" ? "#d4d4d4" : "#808080",
-                cursor: "pointer",
-                fontSize: 18,
-              }}
-              onMouseEnter={(e) => {
-                if (sidebarMode !== "search") e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                if (sidebarMode !== "search") e.currentTarget.style.color = "#808080";
-              }}
             >
-              &#x1F50D;
-            </button>
-            {/* Git icon */}
-            <button
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </ActivityBarIcon>
+            <ActivityBarIcon
+              active={sidebarMode === "git"}
               onClick={() => setSidebarMode("git")}
               title="Source Control (Ctrl+Shift+G)"
-              style={{
-                width: 40,
-                height: 40,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "none",
-                border: "none",
-                borderLeft: sidebarMode === "git" ? "2px solid #d4d4d4" : "2px solid transparent",
-                color: sidebarMode === "git" ? "#d4d4d4" : "#808080",
-                cursor: "pointer",
-                fontSize: 18,
-              }}
-              onMouseEnter={(e) => {
-                if (sidebarMode !== "git") e.currentTarget.style.color = "#d4d4d4";
-              }}
-              onMouseLeave={(e) => {
-                if (sidebarMode !== "git") e.currentTarget.style.color = "#808080";
-              }}
             >
-              &#x2387;
-            </button>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+              </svg>
+            </ActivityBarIcon>
           </div>
           {/* Sidebar content */}
-          <div style={{ width: sidebarWidth, flexShrink: 0, height: "100%" }}>
+          <div style={{ width: sidebarWidth }} className="shrink-0 h-full">
             {sidebarMode === "explorer" && (
               <FileExplorer
                 projectId={decodedProjectId}
@@ -1069,6 +1038,7 @@ export default function ProjectPage({
                 onFileSelect={handleFileSelect}
                 onTreeUpdate={handleTreeUpdate}
                 onDeleteFile={handleDeleteFile}
+                userPresence={otherUsers}
               />
             )}
             {sidebarMode === "search" && (
@@ -1090,12 +1060,7 @@ export default function ProjectPage({
 
         {/* Resize handle */}
         <div
-          style={{
-            width: 4,
-            cursor: "col-resize",
-            backgroundColor: "transparent",
-            flexShrink: 0,
-          }}
+          className="w-1 cursor-col-resize bg-transparent shrink-0 hover:bg-brand-500/30 transition-colors duration-150"
           onMouseDown={(e) => {
             e.preventDefault();
             const startX = e.clientX;
@@ -1113,11 +1078,9 @@ export default function ProjectPage({
           }}
         />
 
-        {/* Editor area (with optional terminal below) */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          {/* Editor pane(s) */}
-          <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
-            {/* Left editor pane */}
+        {/* Editor area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex overflow-hidden min-h-0">
             <EditorPaneContent
               projectId={decodedProjectId}
               activeTab={activeTab}
@@ -1130,20 +1093,14 @@ export default function ProjectPage({
               userName={userName}
               onMarkersChange={handleMarkersChange}
               settings={editorSettings}
+              onTabReorder={handleTabReorder}
             />
 
-            {/* Split divider + right pane */}
             {splitMode && (
               <>
-                {/* Split resize handle */}
                 <div
-                  style={{
-                    width: 4,
-                    cursor: "col-resize",
-                    backgroundColor: "transparent",
-                    flexShrink: 0,
-                    borderLeft: "1px solid #404040",
-                  }}
+                  className="w-1 cursor-col-resize bg-transparent shrink-0 border-l border-surface-300/40
+                    hover:bg-brand-500/30 transition-colors duration-150"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const startX = e.clientX;
@@ -1167,8 +1124,6 @@ export default function ProjectPage({
                     document.addEventListener("mouseup", onUp);
                   }}
                 />
-
-                {/* Right editor pane */}
                 <EditorPaneContent
                   projectId={decodedProjectId}
                   activeTab={rightActiveTab}
@@ -1187,23 +1142,20 @@ export default function ProjectPage({
             )}
           </div>
 
-          {/* Terminal panel */}
           {terminalOpen && (
             <TerminalPanel
               projectId={decodedProjectId}
               height={terminalHeight}
               onResize={handleTerminalResize}
+              onCommandComplete={handleTerminalCommandComplete}
             />
           )}
 
-          {/* Problems panel */}
           {problemsOpen && (
             <ProblemsPanel
               problems={problems}
               filePath={activeTab}
               onProblemClick={(line, _col) => {
-                // Scroll to line - would need editor ref forwarding
-                // For now just display the information
                 void line;
               }}
               onClose={() => setProblemsOpen(false)}
@@ -1216,54 +1168,21 @@ export default function ProjectPage({
         {/* Preview panel */}
         {previewOpen && previewUrl && (
           <>
-            <div
-              style={{
-                width: 4,
-                cursor: "col-resize",
-                backgroundColor: "transparent",
-                flexShrink: 0,
-              }}
-            />
-            <div
-              style={{
-                width: "40%",
-                flexShrink: 0,
-                display: "flex",
-                flexDirection: "column",
-                borderLeft: "1px solid #404040",
-              }}
-            >
-              <div
-                style={{
-                  height: 32,
-                  backgroundColor: "#252526",
-                  borderBottom: "1px solid #404040",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "0 12px",
-                  fontSize: 12,
-                  color: "#808080",
-                  fontFamily: "system-ui, sans-serif",
-                  gap: 8,
-                }}
-              >
+            <div className="w-1 cursor-col-resize bg-transparent shrink-0" />
+            <div className="w-[40%] shrink-0 flex flex-col border-l border-surface-300/40">
+              <div className="h-8 bg-surface-150 border-b border-surface-300/40 flex items-center px-3 text-xs text-surface-500 font-sans gap-2">
                 <span>Preview: {previewFile}</span>
               </div>
               <iframe
                 key={previewUrl}
                 src={previewUrl}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  backgroundColor: "white",
-                }}
+                className="flex-1 border-none bg-white"
                 title="Live Preview"
               />
             </div>
           </>
         )}
 
-        {/* History panel */}
         {historyOpen && (
           <HistoryPanel
             projectId={decodedProjectId}
@@ -1272,7 +1191,6 @@ export default function ProjectPage({
           />
         )}
 
-        {/* Chat panel */}
         {chatOpen && (
           <ChatPanel
             projectId={decodedProjectId}
@@ -1289,7 +1207,6 @@ export default function ProjectPage({
         cursorPosition={cursorPosition}
       />
 
-      {/* Quick Open modal */}
       {quickOpenVisible && (
         <QuickOpen
           tree={tree}
@@ -1298,7 +1215,6 @@ export default function ProjectPage({
         />
       )}
 
-      {/* Settings panel */}
       {settingsOpen && (
         <SettingsPanel
           settings={editorSettings}
@@ -1307,7 +1223,10 @@ export default function ProjectPage({
         />
       )}
 
-      {/* Template setup progress */}
+      {shortcutsOpen && (
+        <KeyboardShortcuts onClose={() => setShortcutsOpen(false)} />
+      )}
+
       {setupTemplate && (
         <SetupProgress
           template={setupTemplate}
@@ -1318,118 +1237,14 @@ export default function ProjectPage({
         />
       )}
 
-      {/* Diff modal overlay */}
+      {/* Diff modal — Monaco side-by-side diff editor */}
       {diffModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.6)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          onClick={() => setDiffModal(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "80%",
-              maxWidth: 900,
-              maxHeight: "80vh",
-              backgroundColor: "#1e1e1e",
-              border: "1px solid #404040",
-              borderRadius: 6,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Diff header */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 16px",
-                backgroundColor: "#252526",
-                borderBottom: "1px solid #404040",
-                fontFamily: "system-ui, sans-serif",
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: "#d4d4d4" }}>
-                Diff: {diffModal.filePath}
-              </span>
-              <button
-                onClick={() => setDiffModal(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#808080",
-                  cursor: "pointer",
-                  fontSize: 18,
-                  lineHeight: 1,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#d4d4d4";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#808080";
-                }}
-              >
-                &#x00D7;
-              </button>
-            </div>
-            {/* Diff content */}
-            <pre
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                margin: 0,
-                padding: 16,
-                fontFamily:
-                  "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
-                fontSize: 12,
-                lineHeight: "18px",
-                color: "#d4d4d4",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-all",
-              }}
-            >
-              {diffModal.diff
-                ? diffModal.diff.split("\n").map((line, i) => {
-                    let color = "#d4d4d4";
-                    let bg = "transparent";
-                    if (line.startsWith("+") && !line.startsWith("+++")) {
-                      color = "#73c991";
-                      bg = "#1d3a28";
-                    } else if (
-                      line.startsWith("-") &&
-                      !line.startsWith("---")
-                    ) {
-                      color = "#f48771";
-                      bg = "#5a1d1d";
-                    } else if (line.startsWith("@@")) {
-                      color = "#75beff";
-                    }
-                    return (
-                      <div
-                        key={i}
-                        style={{ color, backgroundColor: bg, padding: "0 4px" }}
-                      >
-                        {line || " "}
-                      </div>
-                    );
-                  })
-                : "No changes detected."}
-            </pre>
-          </div>
-        </div>
+        <DiffViewer
+          filePath={diffModal.filePath}
+          original={diffModal.original}
+          modified={diffModal.modified}
+          onClose={() => setDiffModal(null)}
+        />
       )}
     </div>
   );

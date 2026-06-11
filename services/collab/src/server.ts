@@ -3,10 +3,18 @@ import { WebSocketServer } from "ws";
 import { handleConnection } from "./ws/connection-handler.js";
 import { handleApiRequest } from "./api/routes.js";
 import { initRoomManager, shutdownRoomManager } from "./rooms/room-manager.js";
-import { SNAPSHOT_DIR } from "./persistence/constants.js";
-import { log } from "./lib/logger.js";
+import { loadConfig, type AppConfig } from "./lib/config.js";
+import { markReady, markNotReady } from "./lib/readiness.js";
+import { log, logError } from "./lib/logger.js";
 
-const PORT = parseInt(process.env.PORT ?? "4000", 10);
+// Validate configuration before anything else: fail fast on misconfiguration.
+let config: AppConfig;
+try {
+  config = loadConfig();
+} catch (err) {
+  logError("server", "configuration error, refusing to start", err);
+  process.exit(1);
+}
 
 const httpServer = createServer(async (req, res) => {
   const handled = await handleApiRequest(req, res);
@@ -22,8 +30,12 @@ wss.on("connection", handleConnection);
 
 initRoomManager();
 
-// Graceful shutdown
+// Graceful shutdown: stop reporting ready, drain, then exit.
+let shuttingDown = false;
 const shutdown = () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  markNotReady();
   log("server", "shutting down...");
   shutdownRoomManager();
   wss.close();
@@ -36,9 +48,9 @@ const shutdown = () => {
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-const HOST = process.env.HOST ?? "0.0.0.0";
-
-httpServer.listen(PORT, HOST, () => {
-  log("server", `listening on ${HOST}:${PORT}`);
-  log("server", `snapshot dir: ${SNAPSHOT_DIR}`);
+httpServer.listen(config.port, config.host, () => {
+  markReady();
+  log("server", `listening on ${config.host}:${config.port}`);
+  log("server", `snapshot dir: ${config.snapshotDir}`);
+  log("server", `env: ${config.nodeEnv}, allowed origins: ${config.allowedOrigins.join(", ")}`);
 });

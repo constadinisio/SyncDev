@@ -2,10 +2,10 @@
 
 import type { ConnectionStatus as Status } from "@/hooks/useYjsConnection";
 
-const STATUS_COLORS: Record<Status, string> = {
-  connected: "#98c379",
-  connecting: "#e5c07b",
-  disconnected: "#e06c75",
+const STATUS_CONFIG: Record<Status, { color: string; label: string }> = {
+  connected: { color: "bg-accent-green", label: "Connected" },
+  connecting: { color: "bg-accent-yellow animate-pulse-glow", label: "Connecting" },
+  disconnected: { color: "bg-accent-red", label: "Disconnected" },
 };
 
 interface ConnectionStatusProps {
@@ -13,18 +13,12 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
+  const config = STATUS_CONFIG[status];
+
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <span
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          backgroundColor: STATUS_COLORS[status],
-          display: "inline-block",
-        }}
-      />
-      <span style={{ fontSize: 12, color: "#808080" }}>{status}</span>
+    <span className="flex items-center gap-1.5">
+      <span className={`w-2 h-2 rounded-full ${config.color}`} />
+      <span className="text-xs text-surface-600">{config.label}</span>
     </span>
   );
 }

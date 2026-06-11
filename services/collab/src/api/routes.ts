@@ -17,24 +17,60 @@ import { handleHistoryRequest } from "./history.js";
 import { handleDownloadRequest } from "./download.js";
 import { handleUploadRequest } from "./upload.js";
 import { handleScanRequest } from "./scan.js";
+import { handleCloneRequest } from "./clone.js";
+import { handleAssetRequest } from "./assets.js";
+import { handleReplaceRequest } from "./replace.js";
+import { handleSyncRequest } from "./sync.js";
 import { logError } from "../lib/logger.js";
+import { loadConfig, isOriginAllowed } from "../lib/config.js";
+import { isServerReady } from "../lib/readiness.js";
+import { RateLimiter, getClientIp } from "../lib/rate-limit.js";
 
-function json(res: ServerResponse, status: number, data: unknown): void {
+const config = loadConfig();
+
+// Rate limiter for resource-heavy / abusable endpoints.
+const sensitiveLimiter = new RateLimiter({
+  windowMs: config.rateLimitWindowMs,
+  max: config.rateLimitMax,
+});
+const SENSITIVE_ROUTE = /^\/api\/(terminal|clone|upload|scan)\//;
+
+// Periodically reclaim memory from expired rate-limit buckets.
+setInterval(() => sensitiveLimiter.sweep(Date.now()), 60_000).unref();
+
+/**
+ * Builds CORS headers for a request, echoing back the Origin only when it is
+ * on the configured allowlist. Unknown origins receive no CORS grant, so the
+ * browser blocks the cross-origin read.
+ */
+function corsHeaders(origin: string | undefined): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    Vary: "Origin",
+  };
+  if (isOriginAllowed(origin, config)) {
+    headers["Access-Control-Allow-Origin"] = origin as string;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
+}
+
+function writeJson(
+  res: ServerResponse,
+  status: number,
+  data: unknown,
+  origin: string | undefined,
+): void {
   res.writeHead(status, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    ...corsHeaders(origin),
   });
   res.end(JSON.stringify(data));
 }
 
-function cors(res: ServerResponse): void {
-  res.writeHead(204, {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
+function writeCors(res: ServerResponse, origin: string | undefined): void {
+  res.writeHead(204, corsHeaders(origin));
   res.end();
 }
 
@@ -53,9 +89,41 @@ export async function handleApiRequest(
 ): Promise<boolean> {
   const url = req.url ?? "";
   const method = req.method ?? "GET";
+  const origin = req.headers.origin;
+
+  // Local helpers that carry the request's Origin into the CORS headers, so
+  // every existing json()/cors() call site stays unchanged.
+  const json = (res2: ServerResponse, status: number, data: unknown): void =>
+    writeJson(res2, status, data, origin);
+  const cors = (res2: ServerResponse): void => writeCors(res2, origin);
 
   if (method === "OPTIONS") {
     cors(res);
+    return true;
+  }
+
+  // Throttle resource-heavy endpoints per client IP.
+  if (SENSITIVE_ROUTE.test(url)) {
+    const { allowed, resetAt } = sensitiveLimiter.hit(getClientIp(req), Date.now());
+    if (!allowed) {
+      const retryAfter = Math.max(0, Math.ceil((resetAt - Date.now()) / 1000));
+      json(res, 429, { error: "rate limit exceeded", retryAfter });
+      return true;
+    }
+  }
+
+  // GET /health — liveness probe (process is up)
+  if (url === "/health" && method === "GET") {
+    json(res, 200, { status: "ok" });
+    return true;
+  }
+
+  // GET /ready — readiness probe (dependencies initialized)
+  if (url === "/ready" && method === "GET") {
+    const ready = isServerReady();
+    json(res, ready ? 200 : 503, {
+      status: ready ? "ready" : "starting",
+    });
     return true;
   }
 
@@ -107,7 +175,8 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(searchMatch[1]);
     const urlObj = new URL(url, "http://localhost");
     const query = urlObj.searchParams.get("q") ?? "";
-    handleSearchRequest(res, pid, query);
+    const isRegex = urlObj.searchParams.get("regex") === "1";
+    handleSearchRequest(res, pid, query, isRegex);
     return true;
   }
 
@@ -167,6 +236,50 @@ export async function handleApiRequest(
       logError("api", "failed to handle upload", err);
       json(res, 500, { error: "internal error" });
     }
+    return true;
+  }
+
+  // POST /api/sync/:projectId — sync all Yjs files to disk (for git)
+  const syncMatch = url.match(/^\/api\/sync\/([^/?]+)/);
+  if (syncMatch && method === "POST") {
+    const pid = decodeURIComponent(syncMatch[1]);
+    handleSyncRequest(res, pid);
+    return true;
+  }
+
+  // POST /api/replace/:projectId — find and replace across files
+  const replaceMatch = url.match(/^\/api\/replace\/([^/?]+)/);
+  if (replaceMatch && method === "POST") {
+    const pid = decodeURIComponent(replaceMatch[1]);
+    const urlObj = new URL(url, "http://localhost");
+    const query = urlObj.searchParams.get("q") ?? "";
+    const replacement = urlObj.searchParams.get("replace") ?? "";
+    const isRegex = urlObj.searchParams.get("regex") === "1";
+    handleReplaceRequest(res, pid, query, replacement, isRegex);
+    return true;
+  }
+
+  // POST /api/clone/:projectId — clone a git repository
+  const cloneMatch = url.match(/^\/api\/clone\/([^/?]+)/);
+  if (cloneMatch && method === "POST") {
+    const pid = decodeURIComponent(cloneMatch[1]);
+    try {
+      const body = JSON.parse(await readBody(req));
+      const { repoUrl } = body as { repoUrl: string };
+      await handleCloneRequest(res, pid, repoUrl);
+    } catch (err) {
+      logError("api", "failed to clone repository", err);
+      json(res, 500, { error: "internal error" });
+    }
+    return true;
+  }
+
+  // GET /api/assets/:projectId/:filePath — serve binary/image files from workspace
+  const assetMatch = url.match(/^\/api\/assets\/([^/]+)\/(.+)/);
+  if (assetMatch && method === "GET") {
+    const pid = decodeURIComponent(assetMatch[1]);
+    const filePath = decodeURIComponent(assetMatch[2]);
+    handleAssetRequest(res, pid, filePath);
     return true;
   }
 

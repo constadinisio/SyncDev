@@ -27,10 +27,10 @@ const SEVERITY_ICONS: Record<ProblemEntry["severity"], string> = {
 };
 
 const SEVERITY_COLORS: Record<ProblemEntry["severity"], string> = {
-  error: "#f48771",
-  warning: "#e2c08d",
-  info: "#75beff",
-  hint: "#808080",
+  error: "text-accent-red",
+  warning: "text-accent-yellow",
+  info: "text-accent-blue",
+  hint: "text-surface-500",
 };
 
 export function ProblemsPanel({
@@ -71,107 +71,43 @@ export function ProblemsPanel({
 
   return (
     <div
-      style={{
-        height,
-        flexShrink: 0,
-        borderTop: "1px solid #404040",
-        backgroundColor: "#1e1e1e",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      style={{ height }}
+      className="shrink-0 border-t border-surface-300/40 bg-surface-0 flex flex-col"
     >
-      {/* Resize handle */}
       <div
         onMouseDown={handleResizeStart}
-        style={{
-          height: 4,
-          cursor: "row-resize",
-          backgroundColor: "transparent",
-          flexShrink: 0,
-        }}
+        className="h-1 cursor-row-resize bg-transparent shrink-0 hover:bg-brand-500/30 transition-colors duration-150"
       />
 
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          padding: "4px 12px",
-          backgroundColor: "#252526",
-          borderBottom: "1px solid #404040",
-          flexShrink: 0,
-          fontFamily: "system-ui, sans-serif",
-          fontSize: 11,
-        }}
-      >
-        <span style={{ color: "#bbbbbb", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      <div className="flex items-center px-3 py-1 bg-surface-150 border-b border-surface-300/40 shrink-0 font-sans text-[11px]">
+        <span className="text-surface-600 font-semibold uppercase tracking-wider">
           Problems
         </span>
-        <span
-          style={{
-            marginLeft: 8,
-            color: "#f48771",
-            display: "flex",
-            alignItems: "center",
-            gap: 3,
-            fontSize: 11,
-          }}
-        >
+        <span className="ml-2 text-accent-red flex items-center gap-1">
           <span>{SEVERITY_ICONS.error}</span> {errorCount}
         </span>
-        <span
-          style={{
-            marginLeft: 8,
-            color: "#e2c08d",
-            display: "flex",
-            alignItems: "center",
-            gap: 3,
-            fontSize: 11,
-          }}
-        >
+        <span className="ml-2 text-accent-yellow flex items-center gap-1">
           <span>{SEVERITY_ICONS.warning}</span> {warningCount}
         </span>
 
         {filePath && (
-          <span style={{ color: "#808080", marginLeft: 12, fontSize: 11 }}>
-            {filePath}
-          </span>
+          <span className="text-surface-500 ml-3 text-[11px]">{filePath}</span>
         )}
 
         <button
           onClick={onClose}
-          style={{
-            marginLeft: "auto",
-            background: "none",
-            border: "none",
-            color: "#808080",
-            cursor: "pointer",
-            fontSize: 16,
-            padding: "0 4px",
-            lineHeight: 1,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#d4d4d4";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "#808080";
-          }}
+          className="ml-auto bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
+            p-1 rounded transition-colors duration-100"
         >
-          &#x00D7;
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
-      {/* Problem list */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {problems.length === 0 && (
-          <div
-            style={{
-              padding: "16px 12px",
-              color: "#808080",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-            }}
-          >
+          <div className="px-3 py-4 text-surface-500 text-xs font-sans">
             No problems detected in this file.
           </div>
         )}
@@ -184,44 +120,19 @@ export function ProblemsPanel({
             }
             onMouseEnter={() => setHoveredIndex(idx)}
             onMouseLeave={() => setHoveredIndex(null)}
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              padding: "3px 12px",
-              fontSize: 12,
-              fontFamily: "system-ui, sans-serif",
-              color: "#d4d4d4",
-              cursor: "pointer",
-              backgroundColor: hoveredIndex === idx ? "#2a2d2e" : "transparent",
-              gap: 8,
-            }}
+            className={`flex items-start px-3 py-1 text-xs font-sans text-surface-800 cursor-pointer gap-2
+              transition-colors duration-75 ${hoveredIndex === idx ? "bg-surface-200" : ""}`}
           >
-            <span
-              style={{
-                color: SEVERITY_COLORS[problem.severity],
-                flexShrink: 0,
-                width: 14,
-                textAlign: "center",
-              }}
-            >
+            <span className={`${SEVERITY_COLORS[problem.severity]} shrink-0 w-3.5 text-center`}>
               {SEVERITY_ICONS[problem.severity]}
             </span>
-            <span
-              style={{
-                flex: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
               {problem.message}
             </span>
             {problem.source && (
-              <span style={{ color: "#808080", fontSize: 11, flexShrink: 0 }}>
-                {problem.source}
-              </span>
+              <span className="text-surface-500 text-[11px] shrink-0">{problem.source}</span>
             )}
-            <span style={{ color: "#808080", fontSize: 11, flexShrink: 0 }}>
+            <span className="text-surface-500 text-[11px] shrink-0">
               [{problem.startLineNumber},{problem.startColumn}]
             </span>
           </div>

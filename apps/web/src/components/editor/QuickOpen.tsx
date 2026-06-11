@@ -75,57 +75,31 @@ export function QuickOpen({ tree, onSelect, onClose }: QuickOpenProps) {
   return (
     <div
       onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        zIndex: 2000,
-        display: "flex",
-        justifyContent: "center",
-        paddingTop: 80,
-      }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex justify-center pt-20 animate-fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 500,
-          maxHeight: 400,
-          backgroundColor: "#252526",
-          border: "1px solid #404040",
-          borderRadius: 6,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
+        className="w-[520px] max-h-[420px] bg-surface-150 border border-surface-300/60 rounded-xl
+          shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-slide-down"
       >
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Search files by name..."
-          style={{
-            padding: "10px 14px",
-            backgroundColor: "#3c3c3c",
-            border: "none",
-            borderBottom: "1px solid #404040",
-            color: "#d4d4d4",
-            fontSize: 14,
-            fontFamily: "system-ui, sans-serif",
-            outline: "none",
-          }}
-        />
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div className="relative">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-500">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search files by name..."
+            className="w-full py-3.5 pl-11 pr-4 bg-transparent border-b border-surface-300/60
+              text-surface-900 text-sm font-sans outline-none placeholder:text-surface-500"
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto py-1">
           {filtered.length === 0 ? (
-            <div
-              style={{
-                padding: "12px 14px",
-                color: "#808080",
-                fontSize: 13,
-                fontFamily: "system-ui, sans-serif",
-              }}
-            >
+            <div className="px-4 py-6 text-surface-500 text-sm font-sans text-center">
               No files found
             </div>
           ) : (
@@ -133,20 +107,13 @@ export function QuickOpen({ tree, onSelect, onClose }: QuickOpenProps) {
               <div
                 key={path}
                 onClick={() => handleSelect(path)}
-                style={{
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  fontFamily: "system-ui, sans-serif",
-                  color: index === selectedIndex ? "#ffffff" : "#cccccc",
-                  backgroundColor: index === selectedIndex ? "#094771" : "transparent",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-                onMouseEnter={(e) => {
-                  setSelectedIndex(index);
-                }}
+                onMouseEnter={() => setSelectedIndex(index)}
+                className={`px-4 py-2 text-[13px] font-sans cursor-pointer whitespace-nowrap
+                  overflow-hidden text-ellipsis transition-colors duration-75
+                  ${index === selectedIndex
+                    ? "bg-brand-600/20 text-brand-300"
+                    : "text-surface-800 hover:bg-surface-200"
+                  }`}
               >
                 {path}
               </div>

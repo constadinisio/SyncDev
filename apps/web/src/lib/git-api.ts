@@ -17,6 +17,19 @@ interface TerminalResult {
   readonly exitCode: number;
 }
 
+/**
+ * Sync all Yjs files to disk before git operations.
+ * This ensures git sees the latest editor content.
+ */
+async function syncToDisk(projectId: string): Promise<void> {
+  await fetch(
+    `${getApiBase()}/api/sync/${encodeURIComponent(projectId)}`,
+    { method: "POST" },
+  ).catch(() => {
+    // Non-critical — git will work with whatever is on disk
+  });
+}
+
 async function execGit(
   projectId: string,
   command: string,
@@ -87,6 +100,8 @@ function parseStatusCode(
 export async function gitStatus(
   projectId: string,
 ): Promise<readonly GitFileChange[]> {
+  // Sync editor content to disk first so git sees all changes
+  await syncToDisk(projectId);
   const result = await execGit(projectId, "git status --porcelain");
 
   if (result.exitCode !== 0) {
@@ -173,8 +188,14 @@ export async function gitCommit(
   projectId: string,
   message: string,
 ): Promise<string> {
-  // Escape double quotes in the message
-  const escaped = message.replace(/"/g, '\\"');
+  // Ensure all files are synced to disk before committing
+  await syncToDisk(projectId);
+  // Safely escape the message for shell: replace \ then " then $  then `
+  const escaped = message
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, "\\$")
+    .replace(/`/g, "\\`");
   const result = await execGit(projectId, `git commit -m "${escaped}"`);
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git commit failed");
@@ -206,11 +227,16 @@ export async function gitCreateBranch(
 }
 
 export async function gitPush(projectId: string): Promise<string> {
-  const result = await execGit(projectId, "git push");
+  const result = await execGit(projectId, "git push -u origin HEAD");
   if (result.exitCode !== 0) {
-    // git push outputs to stderr even on success sometimes
     if (result.stderr.includes("Everything up-to-date")) {
       return "Everything up-to-date";
+    }
+    if (result.stderr.includes("No configured push destination") || result.stderr.includes("does not appear to be a git repository")) {
+      throw new Error("No remote configured. Set a remote URL in Source Control > Branch section.");
+    }
+    if (result.stderr.includes("Authentication failed") || result.stderr.includes("403") || result.stderr.includes("could not read Username")) {
+      throw new Error("Authentication failed. Check your token in Source Control > Branch > Remote Repository.");
     }
     throw new Error(result.stderr || "git push failed");
   }
@@ -218,8 +244,17 @@ export async function gitPush(projectId: string): Promise<string> {
 }
 
 export async function gitPull(projectId: string): Promise<string> {
-  const result = await execGit(projectId, "git pull");
+  const result = await execGit(projectId, "git pull --rebase origin HEAD");
   if (result.exitCode !== 0) {
+    if (result.stderr.includes("no tracking information") || result.stderr.includes("does not appear to be a git repository")) {
+      throw new Error("No remote configured. Set a remote URL in Source Control > Branch section.");
+    }
+    if (result.stderr.includes("Authentication failed") || result.stderr.includes("403") || result.stderr.includes("could not read Username")) {
+      throw new Error("Authentication failed. Check your token in Source Control > Branch > Remote Repository.");
+    }
+    if (result.stderr.includes("Couldn't find remote ref") || result.stdout.includes("Already up to date")) {
+      return "Already up to date.";
+    }
     throw new Error(result.stderr || "git pull failed");
   }
   return result.stdout || "Already up to date.";
@@ -277,6 +312,40 @@ export async function gitInit(projectId: string): Promise<string> {
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || "git init failed");
   }
+  // Auto-configure user if not set globally
+  await execGit(projectId, 'git config user.name "SyncDev User" 2>/dev/null || true');
+  await execGit(projectId, 'git config user.email "user@syncdev.local" 2>/dev/null || true');
+  return result.stdout;
+}
+
+export async function gitRemoteGet(projectId: string): Promise<string> {
+  const result = await execGit(projectId, "git config --get remote.origin.url");
+  if (result.exitCode !== 0) return "";
+  return result.stdout.trim();
+}
+
+export async function gitRemoteSet(
+  projectId: string,
+  url: string,
+): Promise<void> {
+  // Try to set existing remote, if not create it
+  const existing = await gitRemoteGet(projectId);
+  const command = existing
+    ? `git remote set-url origin "${url}"`
+    : `git remote add origin "${url}"`;
+  const result = await execGit(projectId, command);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || "Failed to set remote");
+  }
+}
+
+export async function gitShowFile(
+  projectId: string,
+  filePath: string,
+  ref: string = "HEAD",
+): Promise<string> {
+  const result = await execGit(projectId, `git show ${ref}:"${filePath}"`);
+  if (result.exitCode !== 0) return "";
   return result.stdout;
 }
 
