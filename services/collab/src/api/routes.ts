@@ -25,6 +25,19 @@ import { logError } from "../lib/logger.js";
 import { loadConfig, isOriginAllowed } from "../lib/config.js";
 import { isServerReady } from "../lib/readiness.js";
 import { RateLimiter, getClientIp } from "../lib/rate-limit.js";
+import {
+  ValidationError,
+  parseJson,
+  parseValue,
+  projectIdSchema,
+  createProjectSchema,
+  createNodeSchema,
+  deleteNodeSchema,
+  moveNodeSchema,
+  renameNodeSchema,
+  terminalSchema,
+  cloneSchema,
+} from "../lib/validation.js";
 
 const config = loadConfig();
 
@@ -97,6 +110,16 @@ export async function handleApiRequest(
     writeJson(res2, status, data, origin);
   const cors = (res2: ServerResponse): void => writeCors(res2, origin);
 
+  // Maps validation failures to 400 and everything else to a 500 (logged).
+  const fail = (err: unknown, message: string): void => {
+    if (err instanceof ValidationError) {
+      json(res, 400, { error: err.message });
+      return;
+    }
+    logError("api", message, err);
+    json(res, 500, { error: "internal error" });
+  };
+
   if (method === "OPTIONS") {
     cors(res);
     return true;
@@ -137,17 +160,11 @@ export async function handleApiRequest(
   // POST /api/projects — create a project
   if (url === "/api/projects" && method === "POST") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const projectId = body.projectId as string;
-      if (!projectId) {
-        json(res, 400, { error: "projectId is required" });
-        return true;
-      }
+      const { projectId } = parseJson(createProjectSchema, await readBody(req));
       const tree = loadProjectTree(projectId);
       json(res, 201, tree);
     } catch (err) {
-      logError("api", "failed to create project", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to create project");
     }
     return true;
   }
@@ -183,14 +200,12 @@ export async function handleApiRequest(
   // POST /api/terminal/:projectId — execute a command
   const terminalMatch = url.match(/^\/api\/terminal\/([^/?]+)/);
   if (terminalMatch && method === "POST") {
-    const pid = decodeURIComponent(terminalMatch[1]);
     try {
-      const body = JSON.parse(await readBody(req));
-      const { command } = body as { command: string };
+      const pid = parseValue(projectIdSchema, decodeURIComponent(terminalMatch[1]));
+      const { command } = parseJson(terminalSchema, await readBody(req));
       await handleTerminalRequest(res, pid, command);
     } catch (err) {
-      logError("api", "failed to execute terminal command", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to execute terminal command");
     }
     return true;
   }
@@ -262,14 +277,12 @@ export async function handleApiRequest(
   // POST /api/clone/:projectId — clone a git repository
   const cloneMatch = url.match(/^\/api\/clone\/([^/?]+)/);
   if (cloneMatch && method === "POST") {
-    const pid = decodeURIComponent(cloneMatch[1]);
     try {
-      const body = JSON.parse(await readBody(req));
-      const { repoUrl } = body as { repoUrl: string };
+      const pid = parseValue(projectIdSchema, decodeURIComponent(cloneMatch[1]));
+      const { repoUrl } = parseJson(cloneSchema, await readBody(req));
       await handleCloneRequest(res, pid, repoUrl);
     } catch (err) {
-      logError("api", "failed to clone repository", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to clone repository");
     }
     return true;
   }
@@ -287,7 +300,13 @@ export async function handleApiRequest(
   const filesMatch = url.match(/^\/api\/files\/([^/?]+)/);
   if (!filesMatch) return false;
 
-  const projectId = decodeURIComponent(filesMatch[1]);
+  let projectId: string;
+  try {
+    projectId = parseValue(projectIdSchema, decodeURIComponent(filesMatch[1]));
+  } catch (err) {
+    fail(err, "invalid projectId");
+    return true;
+  }
 
   // GET /api/files/:projectId — get file tree
   if (method === "GET") {
@@ -299,17 +318,11 @@ export async function handleApiRequest(
   // POST /api/files/:projectId — create file or folder
   if (method === "POST") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path, type } = body as { path: string; type: "file" | "folder" };
-      if (!path || !type) {
-        json(res, 400, { error: "path and type are required" });
-        return true;
-      }
+      const { path, type } = parseJson(createNodeSchema, await readBody(req));
       const updated = createNode(projectId, path, type);
       json(res, 201, updated);
     } catch (err) {
-      logError("api", "failed to create node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to create node");
     }
     return true;
   }
@@ -317,17 +330,11 @@ export async function handleApiRequest(
   // DELETE /api/files/:projectId — delete file or folder
   if (method === "DELETE") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path } = body as { path: string };
-      if (!path) {
-        json(res, 400, { error: "path is required" });
-        return true;
-      }
+      const { path } = parseJson(deleteNodeSchema, await readBody(req));
       const updated = deleteNode(projectId, path);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to delete node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to delete node");
     }
     return true;
   }
@@ -335,20 +342,11 @@ export async function handleApiRequest(
   // PUT /api/files/:projectId — move file or folder
   if (method === "PUT") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { sourcePath, targetPath } = body as {
-        sourcePath: string;
-        targetPath: string;
-      };
-      if (!sourcePath || targetPath === undefined) {
-        json(res, 400, { error: "sourcePath and targetPath are required" });
-        return true;
-      }
+      const { sourcePath, targetPath } = parseJson(moveNodeSchema, await readBody(req));
       const updated = moveNode(projectId, sourcePath, targetPath);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to move node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to move node");
     }
     return true;
   }
@@ -356,17 +354,11 @@ export async function handleApiRequest(
   // PATCH /api/files/:projectId — rename file or folder
   if (method === "PATCH") {
     try {
-      const body = JSON.parse(await readBody(req));
-      const { path, newName } = body as { path: string; newName: string };
-      if (!path || !newName) {
-        json(res, 400, { error: "path and newName are required" });
-        return true;
-      }
+      const { path, newName } = parseJson(renameNodeSchema, await readBody(req));
       const updated = renameNode(projectId, path, newName);
       json(res, 200, updated);
     } catch (err) {
-      logError("api", "failed to rename node", err);
-      json(res, 500, { error: "internal error" });
+      fail(err, "failed to rename node");
     }
     return true;
   }
