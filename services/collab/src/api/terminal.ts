@@ -6,6 +6,7 @@ import { log, logError } from "../lib/logger.js";
 import { loadConfig } from "../lib/config.js";
 import { runInDocker } from "../lib/sandbox.js";
 import { writeJson } from "../lib/http.js";
+import { getEnvironmentManager } from "../environments/environment-manager-instance.js";
 
 const config = loadConfig();
 const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
@@ -182,9 +183,9 @@ export async function handleTerminalRequest(
 
   try {
     let result;
-    if (config.terminal.useDocker) {
-      // When this service runs in a container, the bind-mount source must be a
-      // host path. Translate <WORKSPACE_BASE>/<id> to <hostBase>/<id>.
+    if (config.environments.enabled) {
+      result = await getEnvironmentManager().exec(projectId, command, timeoutMs);
+    } else if (config.terminal.useDocker) {
       const safeId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
       const mountSource = config.terminal.hostWorkspaceBase
         ? join(config.terminal.hostWorkspaceBase, safeId)
