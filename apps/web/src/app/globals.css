@@ -38,8 +38,7 @@
 
   /* Font families */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", "Consolas",
-    monospace;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", "Consolas", monospace;
 
   /* Animations */
   --animate-fade-in: fade-in 0.3s ease-out;
@@ -172,4 +171,3 @@ body {
 ::selection {
   background-color: rgba(59, 130, 246, 0.3);
 }
-

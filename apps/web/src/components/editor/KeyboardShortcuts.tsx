@@ -47,13 +47,13 @@ function KeyCombo({ keys }: { readonly keys: string }) {
     <span className="flex gap-1 items-center">
       {parts.map((part, i) => (
         <span key={i}>
-          <kbd className="px-1.5 py-0.5 bg-surface-200 border border-surface-300/60 rounded-md
-            text-[11px] font-mono text-surface-800 shadow-sm">
+          <kbd
+            className="px-1.5 py-0.5 bg-surface-200 border border-surface-300/60 rounded-md
+            text-[11px] font-mono text-surface-800 shadow-sm"
+          >
             {part}
           </kbd>
-          {i < parts.length - 1 && (
-            <span className="text-surface-400 mx-0.5 text-[10px]">+</span>
-          )}
+          {i < parts.length - 1 && <span className="text-surface-400 mx-0.5 text-[10px]">+</span>}
         </span>
       ))}
     </span>
@@ -79,8 +79,18 @@ export function KeyboardShortcuts({ onClose }: KeyboardShortcutsProps) {
             className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
               p-1 rounded transition-colors duration-100"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>

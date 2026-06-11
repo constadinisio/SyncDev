@@ -83,9 +83,19 @@ export function QuickOpen({ tree, onSelect, onClose }: QuickOpenProps) {
           shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-slide-down"
       >
         <div className="relative">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-500">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-500"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
             ref={inputRef}
@@ -110,9 +120,10 @@ export function QuickOpen({ tree, onSelect, onClose }: QuickOpenProps) {
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={`px-4 py-2 text-[13px] font-sans cursor-pointer whitespace-nowrap
                   overflow-hidden text-ellipsis transition-colors duration-75
-                  ${index === selectedIndex
-                    ? "bg-brand-600/20 text-brand-300"
-                    : "text-surface-800 hover:bg-surface-200"
+                  ${
+                    index === selectedIndex
+                      ? "bg-brand-600/20 text-brand-300"
+                      : "text-surface-800 hover:bg-surface-200"
                   }`}
               >
                 {path}

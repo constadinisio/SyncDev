@@ -23,10 +23,7 @@ function getFileContent(projectId: string, filePath: string): string {
   return room.doc.getText("content").toString();
 }
 
-export function handleDownloadRequest(
-  res: ServerResponse,
-  projectId: string,
-): void {
+export function handleDownloadRequest(res: ServerResponse, projectId: string): void {
   try {
     const project = loadProjectTree(projectId);
     const filePaths = collectFilePaths(project.tree, "");

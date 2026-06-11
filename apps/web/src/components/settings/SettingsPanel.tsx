@@ -9,11 +9,7 @@ interface SettingsPanelProps {
   readonly onClose: () => void;
 }
 
-export function SettingsPanel({
-  settings,
-  onSettingsChange,
-  onClose,
-}: SettingsPanelProps) {
+export function SettingsPanel({ settings, onSettingsChange, onClose }: SettingsPanelProps) {
   const update = useCallback(
     (partial: Partial<EditorSettings>) => {
       onSettingsChange({ ...settings, ...partial });
@@ -39,8 +35,18 @@ export function SettingsPanel({
             className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
               p-1 rounded transition-colors duration-100"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>

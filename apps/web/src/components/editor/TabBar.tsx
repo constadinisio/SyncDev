@@ -88,9 +88,10 @@ export function TabBar({
               whitespace-nowrap select-none shrink-0 transition-all duration-100 border-r border-surface-200/60
               ${isDragging ? "opacity-40" : ""}
               ${isDragOver ? "border-l-2 border-l-brand-500" : ""}
-              ${isActive
-                ? "bg-surface-100 text-surface-950 border-t-2 border-t-brand-500"
-                : "bg-surface-200 text-surface-600 border-t-2 border-t-transparent hover:text-surface-700 hover:bg-surface-150"
+              ${
+                isActive
+                  ? "bg-surface-100 text-surface-950 border-t-2 border-t-brand-500"
+                  : "bg-surface-200 text-surface-600 border-t-2 border-t-transparent hover:text-surface-700 hover:bg-surface-150"
               }`}
           >
             <span>{getFileName(path)}</span>
@@ -104,8 +105,18 @@ export function TabBar({
                 ${isActive ? "text-surface-600" : "text-surface-500 opacity-0 group-hover:opacity-100"}
                 hover:bg-surface-300/60 hover:text-surface-800`}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </span>
           </div>

@@ -34,12 +34,7 @@ interface ChatPanelProps {
   readonly onClose: () => void;
 }
 
-export function ChatPanel({
-  projectId,
-  userName,
-  userColor,
-  onClose,
-}: ChatPanelProps) {
+export function ChatPanel({ projectId, userName, userColor, onClose }: ChatPanelProps) {
   const chatRoomId = `${projectId}::__chat__`;
   const connection = useYjsConnection(chatRoomId);
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
@@ -112,17 +107,24 @@ export function ChatPanel({
           className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
             p-1 rounded transition-colors duration-100"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
 
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-3 flex flex-col gap-3"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {messages.length === 0 && (
           <div className="text-surface-500 text-xs text-center mt-6">
             No messages yet. Say hello!
@@ -134,13 +136,9 @@ export function ChatPanel({
               <span className="font-semibold" style={{ color: msg.color }}>
                 {msg.user}
               </span>
-              <span className="text-surface-500 text-[11px]">
-                {formatTime(msg.timestamp)}
-              </span>
+              <span className="text-surface-500 text-[11px]">{formatTime(msg.timestamp)}</span>
             </div>
-            <div className="text-surface-700 break-words leading-relaxed">
-              {msg.text}
-            </div>
+            <div className="text-surface-700 break-words leading-relaxed">{msg.text}</div>
           </div>
         ))}
       </div>
@@ -161,9 +159,10 @@ export function ChatPanel({
           onClick={handleSend}
           disabled={!isValid}
           className={`rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-100
-            ${isValid
-              ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
-              : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            ${
+              isValid
+                ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
+                : "bg-surface-300 text-surface-500 cursor-not-allowed"
             }`}
         >
           Send

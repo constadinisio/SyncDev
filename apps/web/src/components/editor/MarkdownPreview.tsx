@@ -19,10 +19,7 @@ export function MarkdownPreview({ markdown }: MarkdownPreviewProps) {
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6 bg-surface-100 text-surface-800 font-sans text-sm leading-relaxed">
       <style>{markdownStyles}</style>
-      <div
-        className="md-preview max-w-3xl mx-auto"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className="md-preview max-w-3xl mx-auto" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }

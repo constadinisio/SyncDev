@@ -75,9 +75,7 @@ function FileChangeRow({
     >
       <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1">
         <span className={STATUS_COLORS[change.status]}>{fileName}</span>
-        {dirPath && (
-          <span className="text-surface-500 text-[11px]">{dirPath}</span>
-        )}
+        {dirPath && <span className="text-surface-500 text-[11px]">{dirPath}</span>}
       </span>
 
       <span
@@ -116,7 +114,9 @@ function FileChangeRow({
         )}
       </span>
 
-      <span className={`${STATUS_COLORS[change.status]} text-[11px] font-semibold w-3.5 text-center shrink-0`}>
+      <span
+        className={`${STATUS_COLORS[change.status]} text-[11px] font-semibold w-3.5 text-center shrink-0`}
+      >
         {STATUS_LETTERS[change.status]}
       </span>
     </div>
@@ -143,9 +143,18 @@ function SectionHeader({
         text-surface-600 font-sans cursor-pointer select-none bg-surface-200 gap-1
         hover:bg-surface-300/50 transition-colors duration-75"
     >
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-        className={`text-surface-500 transition-transform duration-100 ${collapsed ? "-rotate-90" : ""}`}>
-        <polyline points="6 9 12 15 18 9"/>
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`text-surface-500 transition-transform duration-100 ${collapsed ? "-rotate-90" : ""}`}
+      >
+        <polyline points="6 9 12 15 18 9" />
       </svg>
       <span>{title}</span>
       <span className="text-[10px] text-surface-500 bg-surface-300 px-1.5 rounded-full ml-1">
@@ -211,14 +220,11 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showStatus = useCallback(
-    (text: string, type: StatusMessage["type"]) => {
-      setStatusMsg({ text, type });
-      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
-      statusTimerRef.current = setTimeout(() => setStatusMsg(null), 4000);
-    },
-    [],
-  );
+  const showStatus = useCallback((text: string, type: StatusMessage["type"]) => {
+    setStatusMsg({ text, type });
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    statusTimerRef.current = setTimeout(() => setStatusMsg(null), 4000);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -250,60 +256,115 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
   const handleStage = useCallback(
     async (filePath: string) => {
-      try { await gitStage(projectId, filePath); await refresh(); }
-      catch (err) { showStatus(err instanceof Error ? err.message : "Stage failed", "error"); }
-    }, [projectId, refresh, showStatus]);
+      try {
+        await gitStage(projectId, filePath);
+        await refresh();
+      } catch (err) {
+        showStatus(err instanceof Error ? err.message : "Stage failed", "error");
+      }
+    },
+    [projectId, refresh, showStatus],
+  );
 
   const handleUnstage = useCallback(
     async (filePath: string) => {
-      try { await gitUnstage(projectId, filePath); await refresh(); }
-      catch (err) { showStatus(err instanceof Error ? err.message : "Unstage failed", "error"); }
-    }, [projectId, refresh, showStatus]);
+      try {
+        await gitUnstage(projectId, filePath);
+        await refresh();
+      } catch (err) {
+        showStatus(err instanceof Error ? err.message : "Unstage failed", "error");
+      }
+    },
+    [projectId, refresh, showStatus],
+  );
 
   const handleDiscard = useCallback(
     async (filePath: string) => {
-      try { await gitDiscard(projectId, filePath); await refresh(); showStatus(`Discarded changes to ${filePath}`, "info"); }
-      catch (err) { showStatus(err instanceof Error ? err.message : "Discard failed", "error"); }
-    }, [projectId, refresh, showStatus]);
+      try {
+        await gitDiscard(projectId, filePath);
+        await refresh();
+        showStatus(`Discarded changes to ${filePath}`, "info");
+      } catch (err) {
+        showStatus(err instanceof Error ? err.message : "Discard failed", "error");
+      }
+    },
+    [projectId, refresh, showStatus],
+  );
 
   const handleStageAll = useCallback(async () => {
-    try { await gitStageAll(projectId); await refresh(); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "Stage all failed", "error"); }
+    try {
+      await gitStageAll(projectId);
+      await refresh();
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Stage all failed", "error");
+    }
   }, [projectId, refresh, showStatus]);
 
   const handleUnstageAll = useCallback(async () => {
-    try { await gitUnstageAll(projectId); await refresh(); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "Unstage all failed", "error"); }
+    try {
+      await gitUnstageAll(projectId);
+      await refresh();
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Unstage all failed", "error");
+    }
   }, [projectId, refresh, showStatus]);
 
   const handleCommit = useCallback(async () => {
-    if (!commitMessage.trim()) { showStatus("Please enter a commit message", "error"); return; }
-    try { await gitCommit(projectId, commitMessage.trim()); setCommitMessage(""); await refresh(); showStatus("Commit successful", "success"); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "Commit failed", "error"); }
+    if (!commitMessage.trim()) {
+      showStatus("Please enter a commit message", "error");
+      return;
+    }
+    try {
+      await gitCommit(projectId, commitMessage.trim());
+      setCommitMessage("");
+      await refresh();
+      showStatus("Commit successful", "success");
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Commit failed", "error");
+    }
   }, [projectId, commitMessage, refresh, showStatus]);
 
   const handlePush = useCallback(async () => {
-    try { const result = await gitPush(projectId); showStatus(result, "success"); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "Push failed", "error"); }
+    try {
+      const result = await gitPush(projectId);
+      showStatus(result, "success");
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Push failed", "error");
+    }
   }, [projectId, showStatus]);
 
   const handlePull = useCallback(async () => {
-    try { const result = await gitPull(projectId); showStatus(result, "success"); await refresh(); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "Pull failed", "error"); }
+    try {
+      const result = await gitPull(projectId);
+      showStatus(result, "success");
+      await refresh();
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Pull failed", "error");
+    }
   }, [projectId, refresh, showStatus]);
 
   const handleCreateBranch = useCallback(async () => {
     if (!newBranchName.trim()) return;
     try {
       await gitCreateBranch(projectId, newBranchName.trim());
-      setNewBranchName(""); setShowNewBranch(false); await refresh();
+      setNewBranchName("");
+      setShowNewBranch(false);
+      await refresh();
       showStatus(`Switched to new branch '${newBranchName.trim()}'`, "success");
-    } catch (err) { showStatus(err instanceof Error ? err.message : "Create branch failed", "error"); }
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "Create branch failed", "error");
+    }
   }, [projectId, newBranchName, refresh, showStatus]);
 
   const handleInitRepo = useCallback(async () => {
-    try { await gitInit(projectId); setIsGitRepo(true); await refresh(); showStatus("Git repository initialized", "success"); }
-    catch (err) { showStatus(err instanceof Error ? err.message : "git init failed", "error"); }
+    try {
+      await gitInit(projectId);
+      setIsGitRepo(true);
+      await refresh();
+      showStatus("Git repository initialized", "success");
+    } catch (err) {
+      showStatus(err instanceof Error ? err.message : "git init failed", "error");
+    }
   }, [projectId, refresh, showStatus]);
 
   // Build an authenticated URL by injecting the token
@@ -379,22 +440,43 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
   const handleFileDiff = useCallback(
     async (filePath: string) => {
-      try { const diff = await gitDiff(projectId, filePath); onShowDiff?.(filePath, diff); }
-      catch (err) { showStatus(err instanceof Error ? err.message : "Diff failed", "error"); }
-    }, [projectId, onShowDiff, showStatus]);
+      try {
+        const diff = await gitDiff(projectId, filePath);
+        onShowDiff?.(filePath, diff);
+      } catch (err) {
+        showStatus(err instanceof Error ? err.message : "Diff failed", "error");
+      }
+    },
+    [projectId, onShowDiff, showStatus],
+  );
 
   const canCommit = commitMessage.trim() && stagedChanges.length > 0;
 
   if (!isGitRepo) {
     return (
       <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
-          font-sans flex justify-between items-center">
+        <div
+          className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+          font-sans flex justify-between items-center"
+        >
           <span>Source Control</span>
-          <button onClick={onBack} title="Back to Explorer"
-            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          <button
+            onClick={onBack}
+            title="Back to Explorer"
+            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
         </div>
@@ -417,15 +499,32 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
   return (
     <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
-        font-sans flex justify-between items-center">
+      <div
+        className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center"
+      >
         <span>Source Control</span>
         <div className="flex gap-1 items-center">
-          <SmallButton title="Refresh" onClick={refresh}>&#x21BB;</SmallButton>
-          <button onClick={onBack} title="Back to Explorer"
-            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          <SmallButton title="Refresh" onClick={refresh}>
+            &#x21BB;
+          </SmallButton>
+          <button
+            onClick={onBack}
+            title="Back to Explorer"
+            className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded transition-colors duration-100"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
             </svg>
           </button>
         </div>
@@ -433,8 +532,21 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
       {/* Branch info */}
       <div className="px-3 pb-2 text-xs font-sans text-surface-800 flex items-center gap-1.5">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-surface-500">
-          <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-surface-500"
+        >
+          <line x1="6" y1="3" x2="6" y2="15" />
+          <circle cx="18" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <path d="M18 9a9 9 0 0 1-9 9" />
         </svg>
         <span className="font-medium">{branch || "HEAD"}</span>
         {loading && (
@@ -464,9 +576,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
           onClick={handleCommit}
           disabled={!canCommit}
           className={`w-full py-1.5 mt-1 text-xs font-sans font-medium rounded-lg transition-all duration-100
-            ${canCommit
-              ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
-              : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            ${
+              canCommit
+                ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer"
+                : "bg-surface-300 text-surface-500 cursor-not-allowed"
             }`}
         >
           Commit
@@ -477,11 +590,12 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
       {statusMsg && (
         <div
           className={`px-3 py-1.5 text-[11px] font-sans border-y border-surface-300/40 animate-fade-in
-            ${statusMsg.type === "error"
-              ? "text-accent-red bg-red-900/10"
-              : statusMsg.type === "success"
-                ? "text-accent-green bg-green-900/10"
-                : "text-surface-800 bg-surface-200"
+            ${
+              statusMsg.type === "error"
+                ? "text-accent-red bg-red-900/10"
+                : statusMsg.type === "success"
+                  ? "text-accent-green bg-green-900/10"
+                  : "text-surface-800 bg-surface-200"
             }`}
         >
           {statusMsg.text}
@@ -498,7 +612,9 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
               collapsed={stagedCollapsed}
               onToggle={() => setStagedCollapsed((p) => !p)}
               actions={
-                <SmallButton title="Unstage All" onClick={handleUnstageAll}>&#x2212;</SmallButton>
+                <SmallButton title="Unstage All" onClick={handleUnstageAll}>
+                  &#x2212;
+                </SmallButton>
               }
             />
             {!stagedCollapsed &&
@@ -521,7 +637,9 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
             onToggle={() => setChangesCollapsed((p) => !p)}
             actions={
               unstagedChanges.length > 0 ? (
-                <SmallButton title="Stage All" onClick={handleStageAll}>+</SmallButton>
+                <SmallButton title="Stage All" onClick={handleStageAll}>
+                  +
+                </SmallButton>
               ) : undefined
             }
           />
@@ -578,9 +696,19 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
                 {/* URL */}
                 <div className="text-[11px] text-surface-500 flex items-center gap-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                   </svg>
                   {remoteUrl ? (
                     <span className="text-surface-700 truncate flex-1" title={remoteUrl}>
@@ -590,7 +718,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                     <span className="text-surface-400 italic flex-1">No remote configured</span>
                   )}
                   <button
-                    onClick={() => { setShowRemoteInput(true); setRemoteInput(remoteUrl); }}
+                    onClick={() => {
+                      setShowRemoteInput(true);
+                      setRemoteInput(remoteUrl);
+                    }}
                     className="bg-transparent border-none text-brand-400 hover:text-brand-300
                       cursor-pointer text-[11px] transition-colors duration-100 shrink-0"
                   >
@@ -605,7 +736,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                       onChange={(e) => setRemoteInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSetRemote();
-                        if (e.key === "Escape") { setShowRemoteInput(false); setRemoteInput(""); }
+                        if (e.key === "Escape") {
+                          setShowRemoteInput(false);
+                          setRemoteInput("");
+                        }
                       }}
                       placeholder="https://github.com/user/repo.git"
                       autoFocus
@@ -625,16 +759,32 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
 
                 {/* Token */}
                 <div className="text-[11px] text-surface-500 flex items-center gap-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                   {gitToken ? (
                     <span className="text-accent-green flex-1">Token configured</span>
                   ) : (
-                    <span className="text-surface-400 italic flex-1">No token (public repos only)</span>
+                    <span className="text-surface-400 italic flex-1">
+                      No token (public repos only)
+                    </span>
                   )}
                   <button
-                    onClick={() => { setShowTokenInput(true); setTokenInput(""); }}
+                    onClick={() => {
+                      setShowTokenInput(true);
+                      setTokenInput("");
+                    }}
                     className="bg-transparent border-none text-brand-400 hover:text-brand-300
                       cursor-pointer text-[11px] transition-colors duration-100 shrink-0"
                   >
@@ -649,7 +799,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                       onChange={(e) => setTokenInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSaveToken();
-                        if (e.key === "Escape") { setShowTokenInput(false); setTokenInput(""); }
+                        if (e.key === "Escape") {
+                          setShowTokenInput(false);
+                          setTokenInput("");
+                        }
                       }}
                       placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                       autoFocus
@@ -668,7 +821,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                       </a>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => { setShowTokenInput(false); setTokenInput(""); }}
+                          onClick={() => {
+                            setShowTokenInput(false);
+                            setTokenInput("");
+                          }}
                           className="px-2 py-0.5 text-[11px] bg-surface-200 text-surface-600
                             border border-surface-300/60 rounded-md cursor-pointer hover:bg-surface-300
                             transition-colors duration-100"
@@ -704,7 +860,10 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                     onChange={(e) => setNewBranchName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleCreateBranch();
-                      if (e.key === "Escape") { setShowNewBranch(false); setNewBranchName(""); }
+                      if (e.key === "Escape") {
+                        setShowNewBranch(false);
+                        setNewBranchName("");
+                      }
                     }}
                     placeholder="Branch name"
                     autoFocus
@@ -740,18 +899,12 @@ export function GitPanel({ projectId, onBack, onShowDiff }: GitPanelProps) {
                 className="py-0.5 pr-2 pl-5 text-[11px] font-mono text-surface-800
                   flex gap-1.5 whitespace-nowrap overflow-hidden text-ellipsis"
               >
-                <span className="text-accent-yellow shrink-0">
-                  {entry.hash.substring(0, 7)}
-                </span>
-                <span className="overflow-hidden text-ellipsis">
-                  {entry.message}
-                </span>
+                <span className="text-accent-yellow shrink-0">{entry.hash.substring(0, 7)}</span>
+                <span className="overflow-hidden text-ellipsis">{entry.message}</span>
               </div>
             ))}
           {!logCollapsed && logEntries.length === 0 && (
-            <div className="py-2 pl-5 text-[11px] text-surface-500 font-sans">
-              No commits yet
-            </div>
+            <div className="py-2 pl-5 text-[11px] text-surface-500 font-sans">No commits yet</div>
           )}
         </div>
       </div>

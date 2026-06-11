@@ -40,13 +40,13 @@ export function UserNamePrompt({ onSubmit }: UserNamePromptProps) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[10000] animate-fade-in">
-      <div className="bg-surface-150 border border-surface-300/60 rounded-2xl p-8 min-w-[360px]
-        flex flex-col gap-5 shadow-2xl shadow-black/40 animate-scale-in">
+      <div
+        className="bg-surface-150 border border-surface-300/60 rounded-2xl p-8 min-w-[360px]
+        flex flex-col gap-5 shadow-2xl shadow-black/40 animate-scale-in"
+      >
         <div className="flex flex-col gap-2">
           <h2 className="text-surface-900 text-lg font-semibold">Welcome to SyncDev</h2>
-          <p className="text-surface-500 text-sm">
-            Enter your name to start collaborating.
-          </p>
+          <p className="text-surface-500 text-sm">Enter your name to start collaborating.</p>
         </div>
         <input
           type="text"
@@ -65,9 +65,10 @@ export function UserNamePrompt({ onSubmit }: UserNamePromptProps) {
           onClick={handleSubmit}
           disabled={!isValid}
           className={`rounded-lg px-5 py-3 text-sm font-semibold transition-all duration-150
-            ${isValid
-              ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer shadow-lg shadow-brand-600/25"
-              : "bg-surface-300 text-surface-500 cursor-not-allowed"
+            ${
+              isValid
+                ? "bg-brand-600 hover:bg-brand-500 text-white cursor-pointer shadow-lg shadow-brand-600/25"
+                : "bg-surface-300 text-surface-500 cursor-not-allowed"
             }`}
         >
           Join Session

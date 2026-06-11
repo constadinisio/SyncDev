@@ -21,10 +21,6 @@ const EditorPageClient = dynamic(() => import("./EditorPageClient"), {
   ),
 });
 
-export default function EditorPage({
-  params,
-}: {
-  params: { roomId: string };
-}) {
+export default function EditorPage({ params }: { params: { roomId: string } }) {
   return <EditorPageClient params={params} />;
 }

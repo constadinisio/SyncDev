@@ -78,9 +78,7 @@ function parseBoolean(name: string, raw: string | undefined, fallback: boolean):
 function parseNodeEnv(raw: string | undefined): NodeEnv {
   const value = raw ?? "development";
   if (value !== "development" && value !== "production" && value !== "test") {
-    throw new ConfigError(
-      `NODE_ENV must be development | production | test, got "${value}"`,
-    );
+    throw new ConfigError(`NODE_ENV must be development | production | test, got "${value}"`);
   }
   return value;
 }

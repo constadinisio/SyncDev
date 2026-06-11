@@ -30,17 +30,28 @@ function getShell(): string {
 
 // Timeout tiers: long-running commands get more time
 const LONG_RUNNING_PREFIXES = [
-  "npm install", "npm i ", "npm ci",
-  "npx create-", "npx -y create-",
-  "yarn install", "yarn add",
-  "pnpm install", "pnpm add",
+  "npm install",
+  "npm i ",
+  "npm ci",
+  "npx create-",
+  "npx -y create-",
+  "yarn install",
+  "yarn add",
+  "pnpm install",
+  "pnpm add",
   "pip install",
-  "cargo build", "cargo install",
-  "go build", "go install", "go mod",
-  "dotnet restore", "dotnet build",
-  "docker build", "docker pull",
+  "cargo build",
+  "cargo install",
+  "go build",
+  "go install",
+  "go mod",
+  "dotnet restore",
+  "dotnet build",
+  "docker build",
+  "docker pull",
   "git clone",
-  "npm run build", "npm run dev",
+  "npm run build",
+  "npm run dev",
   "npx next build",
 ];
 
@@ -92,11 +103,7 @@ interface TerminalResult {
   readonly exitCode: number;
 }
 
-function executeCommand(
-  command: string,
-  cwd: string,
-  timeoutMs: number,
-): Promise<TerminalResult> {
+function executeCommand(command: string, cwd: string, timeoutMs: number): Promise<TerminalResult> {
   return new Promise((resolve) => {
     exec(
       command,
@@ -118,12 +125,9 @@ function executeCommand(
         if (error) {
           resolve({
             stdout: truncateOutput(stdout ?? ""),
-            stderr: truncateOutput(
-              stderr ?? error.message ?? "Command failed",
-            ),
-            exitCode: error.code !== undefined
-              ? (typeof error.code === "number" ? error.code : 1)
-              : 1,
+            stderr: truncateOutput(stderr ?? error.message ?? "Command failed"),
+            exitCode:
+              error.code !== undefined ? (typeof error.code === "number" ? error.code : 1) : 1,
           });
           return;
         }

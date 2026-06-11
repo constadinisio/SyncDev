@@ -19,7 +19,13 @@ export const Top: Story = {
       </button>
     ),
   },
-  decorators: [(Story) => <div className="p-16 flex justify-center"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="p-16 flex justify-center">
+        <Story />
+      </div>
+    ),
+  ],
 };
 
 export const Bottom: Story = {
@@ -32,5 +38,11 @@ export const Bottom: Story = {
       </button>
     ),
   },
-  decorators: [(Story) => <div className="p-16 flex justify-center"><Story /></div>],
+  decorators: [
+    (Story) => (
+      <div className="p-16 flex justify-center">
+        <Story />
+      </div>
+    ),
+  ],
 };

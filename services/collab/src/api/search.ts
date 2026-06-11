@@ -139,7 +139,10 @@ export function handleSearchRequest(
     if (allMatches.length >= 500) break;
   }
 
-  log("search", `found ${allMatches.length} matches for "${query}" (regex: ${isRegex}) in project "${projectId}"`);
+  log(
+    "search",
+    `found ${allMatches.length} matches for "${query}" (regex: ${isRegex}) in project "${projectId}"`,
+  );
   writeJson(res, 200, { matches: allMatches });
 }
 

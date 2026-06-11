@@ -19,26 +19,19 @@ export function ImagePreview({ projectId, filePath, fileName }: ImagePreviewProp
       <div
         className="relative rounded-xl overflow-hidden shadow-lg shadow-black/20 border border-surface-300/40 max-w-full max-h-[70vh]"
         style={{
-          backgroundImage: "linear-gradient(45deg, #27272b 25%, transparent 25%), linear-gradient(-45deg, #27272b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #27272b 75%), linear-gradient(-45deg, transparent 75%, #27272b 75%)",
+          backgroundImage:
+            "linear-gradient(45deg, #27272b 25%, transparent 25%), linear-gradient(-45deg, #27272b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #27272b 75%), linear-gradient(-45deg, transparent 75%, #27272b 75%)",
           backgroundSize: "20px 20px",
           backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
           backgroundColor: "#1e1e22",
         }}
       >
         {isSvg ? (
-          <object
-            data={url}
-            type="image/svg+xml"
-            className="max-w-full max-h-[60vh] block"
-          >
+          <object data={url} type="image/svg+xml" className="max-w-full max-h-[60vh] block">
             <img src={url} alt={fileName} className="max-w-full max-h-[60vh] block" />
           </object>
         ) : (
-          <img
-            src={url}
-            alt={fileName}
-            className="max-w-full max-h-[60vh] block"
-          />
+          <img src={url} alt={fileName} className="max-w-full max-h-[60vh] block" />
         )}
       </div>
 

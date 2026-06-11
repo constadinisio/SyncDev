@@ -31,11 +31,7 @@ function setFileContent(projectId: string, filePath: string, content: string): v
   });
 }
 
-export function handleUploadRequest(
-  res: ServerResponse,
-  projectId: string,
-  body: string,
-): void {
+export function handleUploadRequest(res: ServerResponse, projectId: string, body: string): void {
   try {
     const payload: UploadPayload = JSON.parse(body);
 

@@ -37,11 +37,7 @@ interface HistoryPanelProps {
   readonly onClose: () => void;
 }
 
-export function HistoryPanel({
-  projectId,
-  filePath,
-  onClose,
-}: HistoryPanelProps) {
+export function HistoryPanel({ projectId, filePath, onClose }: HistoryPanelProps) {
   const [entries, setEntries] = useState<readonly HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +49,7 @@ export function HistoryPanel({
     try {
       const encodedProject = encodeURIComponent(projectId);
       const encodedFile = encodeURIComponent(filePath);
-      const res = await fetch(
-        `${getApiBase()}/api/history/${encodedProject}/${encodedFile}`,
-      );
+      const res = await fetch(`${getApiBase()}/api/history/${encodedProject}/${encodedFile}`);
       if (!res.ok) {
         throw new Error(`Failed to fetch history: ${res.status}`);
       }
@@ -84,8 +78,18 @@ export function HistoryPanel({
           className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
             p-1 rounded transition-colors duration-100"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -106,22 +110,16 @@ export function HistoryPanel({
         )}
 
         {filePath && error && (
-          <div className="text-accent-red text-xs text-center mt-6">
-            {error}
-          </div>
+          <div className="text-accent-red text-xs text-center mt-6">{error}</div>
         )}
 
         {filePath && !loading && !error && entries.length === 0 && (
-          <div className="text-surface-500 text-xs text-center mt-6">
-            No edits recorded yet.
-          </div>
+          <div className="text-surface-500 text-xs text-center mt-6">No edits recorded yet.</div>
         )}
 
         {entries.length > 0 && (
           <div className="flex flex-col gap-1">
-            <div className="text-surface-500 text-[11px] mb-1 px-1">
-              {filePath}
-            </div>
+            <div className="text-surface-500 text-[11px] mb-1 px-1">{filePath}</div>
             {entries.map((entry, idx) => (
               <div
                 key={`${entry.timestamp}-${idx}`}
@@ -130,9 +128,7 @@ export function HistoryPanel({
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-surface-800">
-                    {entry.user} edited
-                  </div>
+                  <div className="text-surface-800">{entry.user} edited</div>
                   <div className="text-surface-500 text-[11px]">
                     {formatDate(entry.timestamp)} {formatTime(entry.timestamp)}
                   </div>

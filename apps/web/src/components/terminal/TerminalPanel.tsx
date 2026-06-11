@@ -50,14 +50,11 @@ export function TerminalPanel({
 
       setRunning(true);
       try {
-        const res = await fetch(
-          `${getApiBase()}/api/terminal/${encodeURIComponent(projectId)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ command: command.trim() }),
-          },
-        );
+        const res = await fetch(`${getApiBase()}/api/terminal/${encodeURIComponent(projectId)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command: command.trim() }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -116,10 +113,7 @@ export function TerminalPanel({
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (entries.length > 0) {
-          const newIndex =
-            historyIndex === -1
-              ? entries.length - 1
-              : Math.max(0, historyIndex - 1);
+          const newIndex = historyIndex === -1 ? entries.length - 1 : Math.max(0, historyIndex - 1);
           setHistoryIndex(newIndex);
           setInput(entries[newIndex].command);
         }
@@ -179,8 +173,10 @@ export function TerminalPanel({
       />
 
       {/* Terminal header */}
-      <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-surface-600
-        font-sans flex justify-between items-center border-b border-surface-300/40 shrink-0">
+      <div
+        className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center border-b border-surface-300/40 shrink-0"
+      >
         <span>Terminal</span>
         <button
           onClick={handleClear}
@@ -204,19 +200,13 @@ export function TerminalPanel({
               {entry.command}
             </div>
             {entry.stdout && (
-              <div className="text-surface-800 whitespace-pre-wrap break-all">
-                {entry.stdout}
-              </div>
+              <div className="text-surface-800 whitespace-pre-wrap break-all">{entry.stdout}</div>
             )}
             {entry.stderr && (
-              <div className="text-accent-red whitespace-pre-wrap break-all">
-                {entry.stderr}
-              </div>
+              <div className="text-accent-red whitespace-pre-wrap break-all">{entry.stderr}</div>
             )}
             {entry.exitCode !== 0 && (
-              <div className="text-surface-500 text-[11px]">
-                exit code: {entry.exitCode}
-              </div>
+              <div className="text-surface-500 text-[11px]">exit code: {entry.exitCode}</div>
             )}
           </div>
         ))}

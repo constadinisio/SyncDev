@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  fetchProjectTree,
-  getApiBase,
-  type TreeNode,
-} from "@/lib/api";
+import { fetchProjectTree, getApiBase, type TreeNode } from "@/lib/api";
 
 interface ProjectStats {
   readonly totalFiles: number;
@@ -17,22 +13,45 @@ interface ProjectStats {
 }
 
 const EXT_LABELS: Record<string, string> = {
-  ts: "TypeScript", tsx: "TypeScript (JSX)",
-  js: "JavaScript", jsx: "JavaScript (JSX)",
-  py: "Python", rs: "Rust", go: "Go", java: "Java",
-  css: "CSS", html: "HTML", json: "JSON", md: "Markdown",
-  yml: "YAML", yaml: "YAML", svg: "SVG",
+  ts: "TypeScript",
+  tsx: "TypeScript (JSX)",
+  js: "JavaScript",
+  jsx: "JavaScript (JSX)",
+  py: "Python",
+  rs: "Rust",
+  go: "Go",
+  java: "Java",
+  css: "CSS",
+  html: "HTML",
+  json: "JSON",
+  md: "Markdown",
+  yml: "YAML",
+  yaml: "YAML",
+  svg: "SVG",
 };
 
 const EXT_COLORS: Record<string, string> = {
-  ts: "#3178c6", tsx: "#3178c6",
-  js: "#f7df1e", jsx: "#f7df1e",
-  py: "#3776ab", rs: "#dea584", go: "#00add8", java: "#f89820",
-  css: "#1572b6", html: "#e34f26", json: "#a1a1aa", md: "#d4d4d8",
-  yml: "#cb171e", yaml: "#cb171e",
+  ts: "#3178c6",
+  tsx: "#3178c6",
+  js: "#f7df1e",
+  jsx: "#f7df1e",
+  py: "#3776ab",
+  rs: "#dea584",
+  go: "#00add8",
+  java: "#f89820",
+  css: "#1572b6",
+  html: "#e34f26",
+  json: "#a1a1aa",
+  md: "#d4d4d8",
+  yml: "#cb171e",
+  yaml: "#cb171e",
 };
 
-function countTree(nodes: readonly TreeNode[]): { files: number; folders: number; extensions: Record<string, number> } {
+function countTree(nodes: readonly TreeNode[]): {
+  files: number;
+  folders: number;
+  extensions: Record<string, number>;
+} {
   let files = 0;
   let folders = 0;
   const extensions: Record<string, number> = {};
@@ -102,11 +121,13 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
         );
         if (res.ok) {
           const data = await res.json();
-          const matches = (data.matches ?? []).map((m: { filePath: string; line: number; content: string }) => ({
-            file: m.filePath,
-            line: m.line,
-            text: m.content.trim(),
-          }));
+          const matches = (data.matches ?? []).map(
+            (m: { filePath: string; line: number; content: string }) => ({
+              file: m.filePath,
+              line: m.line,
+              text: m.content.trim(),
+            }),
+          );
           setTodos(matches);
         }
       } catch {
@@ -159,8 +180,18 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
               className="p-2 rounded-lg bg-surface-200 hover:bg-surface-300 text-surface-600 border-none
                 cursor-pointer transition-colors duration-100"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="19" y1="12" x2="5" y2="12" />
+                <polyline points="12 19 5 12 12 5" />
               </svg>
             </button>
             <div>
@@ -191,8 +222,18 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
               label="Files"
               value={files}
               icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
                 </svg>
               }
             />
@@ -200,8 +241,17 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
               label="Folders"
               value={folders}
               icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
               }
             />
@@ -209,8 +259,18 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
               label="Languages"
               value={Object.keys(extensions).length}
               icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
                 </svg>
               }
             />
@@ -233,7 +293,9 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
                         style={{ width: `${pct}%`, backgroundColor: color }}
                       />
                     </div>
-                    <span className="text-xs text-surface-500 w-12 text-right">{count} file{count !== 1 ? "s" : ""}</span>
+                    <span className="text-xs text-surface-500 w-12 text-right">
+                      {count} file{count !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 );
               })}
@@ -257,7 +319,9 @@ export function DashboardClient({ projectId }: { readonly projectId: string }) {
                       transition-colors duration-75 cursor-pointer"
                     onClick={() => router.push(`/project/${encodeURIComponent(decodedProjectId)}`)}
                   >
-                    <span className="text-surface-500 shrink-0">{todo.file}:{todo.line}</span>
+                    <span className="text-surface-500 shrink-0">
+                      {todo.file}:{todo.line}
+                    </span>
                     <span className="text-surface-700 truncate">{todo.text}</span>
                   </div>
                 ))}

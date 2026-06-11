@@ -58,10 +58,7 @@ describe("ensureProjectAccess (TOFU ownership)", () => {
 describe("filterAccessibleProjects", () => {
   it("filters to owned/member/unowned projects", () => {
     mod.ensureProjectAccess("owned-by-a", userA);
-    const visible = mod.filterAccessibleProjects(
-      ["owned-by-a", "proj-1", "unowned-x"],
-      userB,
-    );
+    const visible = mod.filterAccessibleProjects(["owned-by-a", "proj-1", "unowned-x"], userB);
     // userB is a member of proj-1 and unowned-x is claimable; owned-by-a is hidden.
     expect(visible).toContain("proj-1");
     expect(visible).toContain("unowned-x");

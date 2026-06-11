@@ -39,11 +39,7 @@ function groupByFile(matches: readonly SearchMatch[]): readonly SearchResultGrou
   }));
 }
 
-export function GlobalSearch({
-  projectId,
-  onResultSelect,
-  onBack,
-}: GlobalSearchProps) {
+export function GlobalSearch({ projectId, onResultSelect, onBack }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<readonly SearchResultGroup[]>([]);
   const [searching, setSearching] = useState(false);
@@ -136,7 +132,10 @@ export function GlobalSearch({
   }, []);
 
   const handleReplaceAll = useCallback(async () => {
-    if (!searchedQuery || !replaceQuery === undefined) return;
+    // `replaceQuery` may legitimately be empty (replace-with-nothing), so the
+    // only meaningful guard is requiring a search query. (Previously this read
+    // `!replaceQuery === undefined`, which was always false and never fired.)
+    if (!searchedQuery) return;
     setReplacing(true);
     try {
       const regexParam = regexMode ? "&regex=1" : "";
@@ -159,8 +158,10 @@ export function GlobalSearch({
   return (
     <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
-        font-sans flex justify-between items-center">
+      <div
+        className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center"
+      >
         <span>Search</span>
         <button
           onClick={onBack}
@@ -168,8 +169,18 @@ export function GlobalSearch({
           className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
             p-1 rounded transition-colors duration-100"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
       </div>
@@ -178,9 +189,19 @@ export function GlobalSearch({
       <div className="px-2 pb-2">
         <div className="relative flex items-center gap-1">
           <div className="relative flex-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-500">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-surface-500"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
               ref={inputRef}
@@ -199,9 +220,10 @@ export function GlobalSearch({
             title="Toggle Regex"
             className={`px-1.5 py-1 text-[11px] font-mono font-bold rounded-md border cursor-pointer
               transition-all duration-100 shrink-0
-              ${regexMode
-                ? "bg-brand-600 text-white border-brand-500"
-                : "bg-surface-200 text-surface-500 border-surface-300/60 hover:text-surface-700"
+              ${
+                regexMode
+                  ? "bg-brand-600 text-white border-brand-500"
+                  : "bg-surface-200 text-surface-500 border-surface-300/60 hover:text-surface-700"
               }`}
           >
             .*
@@ -215,14 +237,24 @@ export function GlobalSearch({
           onClick={() => setShowReplace((p) => !p)}
           title="Toggle Replace"
           className={`p-1 rounded-md border cursor-pointer transition-all duration-100 shrink-0
-            ${showReplace
-              ? "bg-brand-600/20 text-brand-400 border-brand-500/30"
-              : "bg-transparent text-surface-500 border-transparent hover:text-surface-700"
+            ${
+              showReplace
+                ? "bg-brand-600/20 text-brand-400 border-brand-500/30"
+                : "bg-transparent text-surface-500 border-transparent hover:text-surface-700"
             }`}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            className={`transition-transform duration-200 ${showReplace ? "rotate-180" : ""}`}>
-            <polyline points="6 9 12 15 18 9"/>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-transform duration-200 ${showReplace ? "rotate-180" : ""}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
         {showReplace && (
@@ -242,9 +274,10 @@ export function GlobalSearch({
               title="Replace All"
               className={`px-2 py-1 text-[11px] font-medium rounded-md border cursor-pointer shrink-0
                 transition-all duration-100
-                ${replacing || !searchedQuery
-                  ? "bg-surface-300 text-surface-500 border-surface-300/60 cursor-not-allowed"
-                  : "bg-accent-orange/20 text-accent-orange border-accent-orange/30 hover:bg-accent-orange/30"
+                ${
+                  replacing || !searchedQuery
+                    ? "bg-surface-300 text-surface-500 border-surface-300/60 cursor-not-allowed"
+                    : "bg-accent-orange/20 text-accent-orange border-accent-orange/30 hover:bg-accent-orange/30"
                 }`}
             >
               {replacing ? "..." : "All"}
@@ -256,8 +289,8 @@ export function GlobalSearch({
       {/* Status line */}
       {searchedQuery && (
         <div className="px-3 pb-1.5 text-[11px] text-surface-500 font-sans">
-          {totalMatches} result{totalMatches !== 1 ? "s" : ""} in{" "}
-          {results.length} file{results.length !== 1 ? "s" : ""}
+          {totalMatches} result{totalMatches !== 1 ? "s" : ""} in {results.length} file
+          {results.length !== 1 ? "s" : ""}
         </div>
       )}
 
@@ -286,9 +319,18 @@ export function GlobalSearch({
                 className="flex items-center gap-1 px-2 py-1 text-xs font-sans text-surface-800
                   cursor-pointer bg-surface-200 select-none hover:bg-surface-300/50 transition-colors duration-75"
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-                  className={`text-surface-500 transition-transform duration-100 ${isCollapsed ? "-rotate-90" : ""}`}>
-                  <polyline points="6 9 12 15 18 9"/>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`text-surface-500 transition-transform duration-100 ${isCollapsed ? "-rotate-90" : ""}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
                 </svg>
                 <span className="font-semibold">{fileName}</span>
                 <span className="text-surface-500 ml-1">{group.filePath}</span>

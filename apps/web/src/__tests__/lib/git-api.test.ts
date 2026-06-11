@@ -5,21 +5,9 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // We need to import after mocking
-import {
-  gitStatus,
-  gitBranch,
-  gitLog,
-  gitInit,
-  gitCommit,
-  gitStage,
-  gitDiff,
-} from "@/lib/git-api";
+import { gitStatus, gitBranch, gitLog, gitInit, gitCommit, gitStage, gitDiff } from "@/lib/git-api";
 
-function mockTerminalResponse(result: {
-  stdout: string;
-  stderr: string;
-  exitCode: number;
-}) {
+function mockTerminalResponse(result: { stdout: string; stderr: string; exitCode: number }) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     json: () => Promise.resolve(result),
@@ -139,8 +127,8 @@ describe("git-api", () => {
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       // Verify that special chars are escaped
-      expect(body.command).toContain('\\$vars');
-      expect(body.command).toContain('\\`backticks\\`');
+      expect(body.command).toContain("\\$vars");
+      expect(body.command).toContain("\\`backticks\\`");
       expect(body.command).toContain('\\"quotes\\"');
     });
   });

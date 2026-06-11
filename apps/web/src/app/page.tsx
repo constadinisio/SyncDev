@@ -63,13 +63,9 @@ function TemplateCard({
         <span className="text-2xl group-hover:scale-110 transition-transform duration-200">
           {template.icon}
         </span>
-        <span className="text-sm font-semibold text-surface-900">
-          {template.name}
-        </span>
+        <span className="text-sm font-semibold text-surface-900">{template.name}</span>
       </div>
-      <span className="text-xs text-surface-600 leading-relaxed">
-        {template.description}
-      </span>
+      <span className="text-xs text-surface-600 leading-relaxed">{template.description}</span>
       {template.tags.length > 0 && (
         <div className="flex gap-1.5 flex-wrap mt-1">
           {template.tags.map((tag) => {
@@ -117,8 +113,17 @@ function ProjectCard({
         className="flex items-center gap-3 bg-transparent border-none cursor-pointer flex-1 min-w-0 p-0"
       >
         <span className="text-brand-400 text-lg group-hover:scale-110 transition-transform shrink-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
         </span>
         <span className="text-sm text-surface-800 group-hover:text-surface-950 font-medium transition-colors truncate">
@@ -131,8 +136,20 @@ function ProjectCard({
         className="bg-transparent border-none text-surface-400 hover:text-surface-700 cursor-pointer
           p-1 rounded opacity-0 group-hover:opacity-100 transition-all duration-100 shrink-0"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
         </svg>
       </button>
     </div>
@@ -154,7 +171,11 @@ export default function Home() {
     if (!url) return;
 
     // Extract project name from URL (e.g., "my-repo" from "https://github.com/user/my-repo.git")
-    const repoName = url.split("/").pop()?.replace(/\.git$/, "") ?? generateProjectName();
+    const repoName =
+      url
+        .split("/")
+        .pop()
+        ?.replace(/\.git$/, "") ?? generateProjectName();
     const safeName = repoName.replace(/[^a-zA-Z0-9._-]/g, "_");
 
     setCloning(true);
@@ -190,15 +211,11 @@ export default function Home() {
 
   const handleTemplateSelect = useCallback(
     (template: ProjectTemplate) => {
-      const name =
-        projectName.trim().replace(/[^a-zA-Z0-9._-]/g, "_") ||
-        generateProjectName();
+      const name = projectName.trim().replace(/[^a-zA-Z0-9._-]/g, "_") || generateProjectName();
       if (template.id === "empty") {
         router.push(`/project/${encodeURIComponent(name)}`);
       } else {
-        router.push(
-          `/project/${encodeURIComponent(name)}?template=${template.id}`,
-        );
+        router.push(`/project/${encodeURIComponent(name)}?template=${template.id}`);
       }
     },
     [projectName, router],
@@ -215,7 +232,16 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/25">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="16 18 22 12 16 6" />
                 <polyline points="8 6 2 12 8 18" />
               </svg>
@@ -234,8 +260,10 @@ export default function Home() {
           <label className="text-xs font-medium text-surface-500 uppercase tracking-wider">
             Create or open a project
           </label>
-          <div className={`flex w-full rounded-xl overflow-hidden border transition-all duration-200 shadow-lg shadow-black/10
-            ${inputFocused ? "border-brand-500/60 shadow-brand-500/10" : "border-surface-300/50"}`}>
+          <div
+            className={`flex w-full rounded-xl overflow-hidden border transition-all duration-200 shadow-lg shadow-black/10
+            ${inputFocused ? "border-brand-500/60 shadow-brand-500/10" : "border-surface-300/50"}`}
+          >
             <input
               type="text"
               value={projectName}
@@ -264,11 +292,7 @@ export default function Home() {
           </label>
           <div className="flex gap-4 flex-wrap justify-center max-w-4xl">
             {PROJECT_TEMPLATES.map((t) => (
-              <TemplateCard
-                key={t.id}
-                template={t}
-                onSelect={handleTemplateSelect}
-              />
+              <TemplateCard key={t.id} template={t} onSelect={handleTemplateSelect} />
             ))}
           </div>
         </div>
@@ -280,13 +304,34 @@ export default function Home() {
             className="text-xs font-medium text-surface-500 uppercase tracking-wider hover:text-surface-700
               cursor-pointer bg-transparent border-none flex items-center gap-1.5 transition-colors duration-100"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="6" y1="3" x2="6" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M18 9a9 9 0 0 1-9 9" />
             </svg>
             Clone from Git
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-              className={`transition-transform duration-200 ${cloneOpen ? "rotate-180" : ""}`}>
-              <polyline points="6 9 12 15 18 9"/>
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`transition-transform duration-200 ${cloneOpen ? "rotate-180" : ""}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
           {cloneOpen && (
@@ -306,9 +351,10 @@ export default function Home() {
                   onClick={handleClone}
                   disabled={cloning || !cloneUrl.trim()}
                   className={`px-6 py-3 font-semibold text-sm transition-colors duration-150 cursor-pointer whitespace-nowrap
-                    ${cloning || !cloneUrl.trim()
-                      ? "bg-surface-300 text-surface-500 cursor-not-allowed"
-                      : "bg-brand-600 hover:bg-brand-500 text-white"
+                    ${
+                      cloning || !cloneUrl.trim()
+                        ? "bg-surface-300 text-surface-500 cursor-not-allowed"
+                        : "bg-brand-600 hover:bg-brand-500 text-white"
                     }`}
                 >
                   {cloning ? (
@@ -322,9 +368,7 @@ export default function Home() {
                 </button>
               </div>
               {cloneError && (
-                <div className="text-accent-red text-xs px-2 animate-fade-in">
-                  {cloneError}
-                </div>
+                <div className="text-accent-red text-xs px-2 animate-fade-in">{cloneError}</div>
               )}
             </div>
           )}

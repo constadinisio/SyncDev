@@ -80,9 +80,7 @@ export function ProblemsPanel({
       />
 
       <div className="flex items-center px-3 py-1 bg-surface-150 border-b border-surface-300/40 shrink-0 font-sans text-[11px]">
-        <span className="text-surface-600 font-semibold uppercase tracking-wider">
-          Problems
-        </span>
+        <span className="text-surface-600 font-semibold uppercase tracking-wider">Problems</span>
         <span className="ml-2 text-accent-red flex items-center gap-1">
           <span>{SEVERITY_ICONS.error}</span> {errorCount}
         </span>
@@ -90,17 +88,25 @@ export function ProblemsPanel({
           <span>{SEVERITY_ICONS.warning}</span> {warningCount}
         </span>
 
-        {filePath && (
-          <span className="text-surface-500 ml-3 text-[11px]">{filePath}</span>
-        )}
+        {filePath && <span className="text-surface-500 ml-3 text-[11px]">{filePath}</span>}
 
         <button
           onClick={onClose}
           className="ml-auto bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer
             p-1 rounded transition-colors duration-100"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -115,9 +121,7 @@ export function ProblemsPanel({
         {problems.map((problem, idx) => (
           <div
             key={`${problem.startLineNumber}:${problem.startColumn}:${idx}`}
-            onClick={() =>
-              onProblemClick?.(problem.startLineNumber, problem.startColumn)
-            }
+            onClick={() => onProblemClick?.(problem.startLineNumber, problem.startColumn)}
             onMouseEnter={() => setHoveredIndex(idx)}
             onMouseLeave={() => setHoveredIndex(null)}
             className={`flex items-start px-3 py-1 text-xs font-sans text-surface-800 cursor-pointer gap-2

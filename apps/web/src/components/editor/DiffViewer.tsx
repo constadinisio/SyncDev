@@ -24,11 +24,20 @@ interface DiffViewerProps {
 function inferLanguage(filePath: string): string {
   const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
   const map: Record<string, string> = {
-    ts: "typescript", tsx: "typescript",
-    js: "javascript", jsx: "javascript",
-    py: "python", rs: "rust", go: "go", java: "java",
-    css: "css", html: "html", json: "json", md: "markdown",
-    yml: "yaml", yaml: "yaml",
+    ts: "typescript",
+    tsx: "typescript",
+    js: "javascript",
+    jsx: "javascript",
+    py: "python",
+    rs: "rust",
+    go: "go",
+    java: "java",
+    css: "css",
+    html: "html",
+    json: "json",
+    md: "markdown",
+    yml: "yaml",
+    yaml: "yaml",
   };
   return map[ext] ?? "plaintext";
 }
@@ -57,8 +66,18 @@ export function DiffViewer({ filePath, original, modified, onClose }: DiffViewer
             className="bg-transparent border-none text-surface-500 hover:text-surface-800 cursor-pointer p-1 rounded
               transition-colors duration-100"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>

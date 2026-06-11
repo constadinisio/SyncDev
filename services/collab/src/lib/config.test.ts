@@ -20,14 +20,17 @@ describe("loadConfig", () => {
 
   it("requires ALLOWED_ORIGINS in production", () => {
     expect(() =>
-      loadConfig({ NODE_ENV: "production", COLLAB_JWT_SECRET: "x".repeat(32) } as NodeJS.ProcessEnv),
+      loadConfig({
+        NODE_ENV: "production",
+        COLLAB_JWT_SECRET: "x".repeat(32),
+      } as NodeJS.ProcessEnv),
     ).toThrow(/ALLOWED_ORIGINS/);
   });
 
   it("rejects wildcard origin in production", () => {
-    expect(() =>
-      loadConfig({ ...PROD_BASE, ALLOWED_ORIGINS: "*" } as NodeJS.ProcessEnv),
-    ).toThrow(/ALLOWED_ORIGINS/);
+    expect(() => loadConfig({ ...PROD_BASE, ALLOWED_ORIGINS: "*" } as NodeJS.ProcessEnv)).toThrow(
+      /ALLOWED_ORIGINS/,
+    );
   });
 
   it("requires COLLAB_JWT_SECRET when auth is enforced", () => {
@@ -49,9 +52,9 @@ describe("loadConfig", () => {
   });
 
   it("rejects invalid integers and booleans", () => {
-    expect(() =>
-      loadConfig({ NODE_ENV: "development", PORT: "abc" } as NodeJS.ProcessEnv),
-    ).toThrow(/PORT/);
+    expect(() => loadConfig({ NODE_ENV: "development", PORT: "abc" } as NodeJS.ProcessEnv)).toThrow(
+      /PORT/,
+    );
     expect(() =>
       loadConfig({ NODE_ENV: "development", AUTH_ENFORCED: "maybe" } as NodeJS.ProcessEnv),
     ).toThrow(/AUTH_ENFORCED/);

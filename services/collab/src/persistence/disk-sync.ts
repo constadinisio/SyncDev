@@ -8,8 +8,7 @@ import type { TreeNode } from "../api/file-tree.js";
 import * as Y from "yjs";
 import type { Room } from "../types/index.js";
 
-const WORKSPACE_BASE =
-  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
+const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 // Room IDs that are internal and should not be synced to disk
 const INTERNAL_ROOM_PREFIXES = ["__chat__", "__presence__", "__history__"];
@@ -158,6 +157,9 @@ export function syncProjectToDisk(projectId: string): number {
     }
   }
 
-  log("disk-sync", `full project sync: ${synced}/${filePaths.length} files written for "${projectId}"`);
+  log(
+    "disk-sync",
+    `full project sync: ${synced}/${filePaths.length} files written for "${projectId}"`,
+  );
   return synced;
 }

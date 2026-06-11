@@ -16,9 +16,7 @@ const config = loadConfig();
 const JWT_ISSUER = "syncdev-web";
 const JWT_AUDIENCE = "syncdev-collab";
 
-const secretKey = config.collabJwtSecret
-  ? new TextEncoder().encode(config.collabJwtSecret)
-  : null;
+const secretKey = config.collabJwtSecret ? new TextEncoder().encode(config.collabJwtSecret) : null;
 
 export interface AuthUser {
   readonly id: string;

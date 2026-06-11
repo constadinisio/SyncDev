@@ -7,11 +7,7 @@ export const metadata: Metadata = {
   description: "Real-time collaborative code editor powered by Yjs CRDTs",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-surface-50 text-surface-800 antialiased">

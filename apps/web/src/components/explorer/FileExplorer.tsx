@@ -84,28 +84,22 @@ export function FileExplorer({
 
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-  const handleDelete = useCallback(
-    (path: string) => {
-      setPendingDelete(path);
-    },
-    [],
-  );
+  const handleDelete = useCallback((path: string) => {
+    setPendingDelete(path);
+  }, []);
 
-  const confirmDelete = useCallback(
-    async () => {
-      if (!pendingDelete) return;
-      try {
-        const updated = await deleteProjectNode(projectId, pendingDelete);
-        onTreeUpdate(updated);
-        onDeleteFile?.(pendingDelete);
-      } catch (err) {
-        console.error("Delete failed:", err);
-      } finally {
-        setPendingDelete(null);
-      }
-    },
-    [pendingDelete, projectId, onTreeUpdate, onDeleteFile],
-  );
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    try {
+      const updated = await deleteProjectNode(projectId, pendingDelete);
+      onTreeUpdate(updated);
+      onDeleteFile?.(pendingDelete);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    } finally {
+      setPendingDelete(null);
+    }
+  }, [pendingDelete, projectId, onTreeUpdate, onDeleteFile]);
 
   const handleRename = useCallback(
     async (path: string, newName: string) => {
@@ -145,9 +139,7 @@ export function FileExplorer({
         const file = files[i];
         try {
           const content = await readFileAsText(file);
-          const filePath = targetFolder
-            ? `${targetFolder}/${file.name}`
-            : file.name;
+          const filePath = targetFolder ? `${targetFolder}/${file.name}` : file.name;
           uploadFiles.push({ path: filePath, content });
         } catch (err) {
           console.error(`Failed to read file ${file.name}:`, err);
@@ -157,14 +149,11 @@ export function FileExplorer({
       if (uploadFiles.length === 0) return;
 
       try {
-        const res = await fetch(
-          `${getApiBase()}/api/upload/${encodeURIComponent(projectId)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ files: uploadFiles }),
-          },
-        );
+        const res = await fetch(`${getApiBase()}/api/upload/${encodeURIComponent(projectId)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: uploadFiles }),
+        });
         if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
         const updated: ProjectTree = await res.json();
         onTreeUpdate(updated);
@@ -245,8 +234,10 @@ export function FileExplorer({
   return (
     <div className="h-full bg-surface-150 border-r border-surface-300/40 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
-        font-sans flex justify-between items-center">
+      <div
+        className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface-600
+        font-sans flex justify-between items-center"
+      >
         <span>Explorer</span>
         <div className="flex gap-1">
           <button
@@ -258,8 +249,20 @@ export function FileExplorer({
             className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
               transition-colors duration-100"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="4 14 10 14 10 20" />
+              <polyline points="20 10 14 10 14 4" />
+              <line x1="14" y1="10" x2="21" y2="3" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
           </button>
           <button
@@ -268,8 +271,20 @@ export function FileExplorer({
             className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
               transition-colors duration-100"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="18" x2="12" y2="12" />
+              <line x1="9" y1="15" x2="15" y2="15" />
             </svg>
           </button>
           <button
@@ -278,8 +293,19 @@ export function FileExplorer({
             className="bg-transparent border-none text-surface-600 hover:text-surface-800 cursor-pointer p-1 rounded
               transition-colors duration-100"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              <line x1="12" y1="11" x2="12" y2="17" />
+              <line x1="9" y1="14" x2="15" y2="14" />
             </svg>
           </button>
         </div>
@@ -287,8 +313,18 @@ export function FileExplorer({
 
       {/* Project name */}
       <div className="px-3 py-1 text-[13px] font-semibold text-surface-700 font-sans flex items-center gap-1.5">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-surface-500">
-          <polyline points="6 9 12 15 18 9"/>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-surface-500"
+        >
+          <polyline points="6 9 12 15 18 9" />
         </svg>
         {projectId.toUpperCase()}
       </div>
@@ -308,9 +344,7 @@ export function FileExplorer({
           </div>
         ) : (
           tree.map((node) => {
-            const usersOnFile = userPresence?.filter(
-              (u) => u.activeFile === node.name,
-            );
+            const usersOnFile = userPresence?.filter((u) => u.activeFile === node.name);
             return (
               <TreeNodeItem
                 key={`${node.name}-${collapseKey}`}
@@ -344,11 +378,15 @@ export function FileExplorer({
       {/* Delete confirmation dialog */}
       {pendingDelete && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex items-center justify-center animate-fade-in">
-          <div className="bg-surface-150 border border-surface-300/60 rounded-xl p-5 min-w-[320px]
-            flex flex-col gap-4 shadow-2xl shadow-black/40 animate-scale-in font-sans">
+          <div
+            className="bg-surface-150 border border-surface-300/60 rounded-xl p-5 min-w-[320px]
+            flex flex-col gap-4 shadow-2xl shadow-black/40 animate-scale-in font-sans"
+          >
             <div className="text-surface-900 text-sm font-semibold">Delete file?</div>
             <div className="text-surface-600 text-xs">
-              Are you sure you want to delete <span className="font-medium text-surface-800">{pendingDelete}</span>? This cannot be undone.
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-surface-800">{pendingDelete}</span>? This cannot be
+              undone.
             </div>
             <div className="flex gap-2 justify-end">
               <button

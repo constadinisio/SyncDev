@@ -7,10 +7,7 @@ import {
   moveNode,
   listProjects,
 } from "./file-tree.js";
-import {
-  handlePreviewRequest,
-  handlePreviewEvents,
-} from "./preview.js";
+import { handlePreviewRequest, handlePreviewEvents } from "./preview.js";
 import { handleSearchRequest } from "./search.js";
 import { handleTerminalRequest } from "./terminal.js";
 import { handleHistoryRequest } from "./history.js";

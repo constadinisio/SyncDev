@@ -57,10 +57,7 @@ export async function createProjectNode(
   return res.json();
 }
 
-export async function deleteProjectNode(
-  projectId: string,
-  path: string,
-): Promise<ProjectTree> {
+export async function deleteProjectNode(projectId: string, path: string): Promise<ProjectTree> {
   const res = await authedFetch(`${getApiBase()}/api/files/${encodeURIComponent(projectId)}`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
@@ -171,9 +168,29 @@ export function isImageExtension(fileName: string): boolean {
 export function isBinaryExtension(fileName: string): boolean {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   return [
-    "png", "jpg", "jpeg", "gif", "svg", "ico", "webp", "bmp",
-    "pdf", "woff", "woff2", "ttf", "mp3", "wav", "mp4", "webm",
-    "zip", "tar", "gz", "exe", "dll", "so", "dylib",
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "svg",
+    "ico",
+    "webp",
+    "bmp",
+    "pdf",
+    "woff",
+    "woff2",
+    "ttf",
+    "mp3",
+    "wav",
+    "mp4",
+    "webm",
+    "zip",
+    "tar",
+    "gz",
+    "exe",
+    "dll",
+    "so",
+    "dylib",
   ].includes(ext);
 }
 

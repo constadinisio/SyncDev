@@ -21,8 +21,7 @@ export function useYjsConnection(roomId: string): YjsConnection | null {
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL
-      ?? `ws://${window.location.hostname}:4000`;
+    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? `ws://${window.location.hostname}:4000`;
     const doc = new Y.Doc();
 
     // IndexedDB persistence — survives browser restarts

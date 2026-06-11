@@ -13,10 +13,7 @@ import { Breadcrumbs } from "@/components/editor/Breadcrumbs";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { UserList } from "@/components/presence/UserList";
-import {
-  UserNamePrompt,
-  getStoredUserName,
-} from "@/components/presence/UserNamePrompt";
+import { UserNamePrompt, getStoredUserName } from "@/components/presence/UserNamePrompt";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { CommentGutter, useCommentLines } from "@/components/comments/CommentGutter";
 import { HistoryPanel } from "@/components/history/HistoryPanel";
@@ -51,8 +48,14 @@ import { FollowBar } from "@/components/presence/FollowBar";
 import { useSearchParams, useRouter } from "next/navigation";
 
 const COLORS = [
-  "#f87171", "#60a5fa", "#4ade80", "#facc15",
-  "#a78bfa", "#22d3ee", "#fb923c", "#f472b6",
+  "#f87171",
+  "#60a5fa",
+  "#4ade80",
+  "#facc15",
+  "#a78bfa",
+  "#22d3ee",
+  "#fb923c",
+  "#f472b6",
 ];
 
 function pickColor(name: string): string {
@@ -66,11 +69,20 @@ function pickColor(name: string): string {
 function inferLanguage(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();
   const map: Record<string, string> = {
-    ts: "typescript", tsx: "typescript",
-    js: "javascript", jsx: "javascript",
-    py: "python", rs: "rust", go: "go", java: "java",
-    css: "css", html: "html", json: "json", md: "markdown",
-    yml: "yaml", yaml: "yaml",
+    ts: "typescript",
+    tsx: "typescript",
+    js: "javascript",
+    jsx: "javascript",
+    py: "python",
+    rs: "rust",
+    go: "go",
+    java: "java",
+    css: "css",
+    html: "html",
+    json: "json",
+    md: "markdown",
+    yml: "yaml",
+    yaml: "yaml",
   };
   return map[ext ?? ""] ?? "plaintext";
 }
@@ -127,9 +139,7 @@ function EditorPanel({
     setGlyphClickLine(null);
   }, []);
 
-  const markdownContent = connection
-    ? connection.doc.getText("content").toString()
-    : "";
+  const markdownContent = connection ? connection.doc.getText("content").toString() : "";
 
   return (
     <div className="flex-1 flex flex-col">
@@ -141,9 +151,10 @@ function EditorPanel({
             <button
               onClick={() => setShowMarkdownPreview((prev) => !prev)}
               className={`px-2.5 py-0.5 text-[11px] rounded-md border cursor-pointer transition-colors duration-100
-                ${showMarkdownPreview
-                  ? "bg-brand-600 text-white border-brand-500"
-                  : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300"
+                ${
+                  showMarkdownPreview
+                    ? "bg-brand-600 text-white border-brand-500"
+                    : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300"
                 }`}
             >
               {showMarkdownPreview ? "Editor" : "Preview"}
@@ -252,9 +263,18 @@ function EditorPaneContent({
                 className="bg-transparent border-none text-surface-500 hover:text-surface-800
                   cursor-pointer p-1 rounded transition-colors duration-100"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="12" y1="3" x2="12" y2="21"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="12" y1="3" x2="12" y2="21" />
                 </svg>
               </button>
             )}
@@ -265,8 +285,18 @@ function EditorPaneContent({
                 className="bg-transparent border-none text-surface-500 hover:text-surface-800
                   cursor-pointer p-1 rounded transition-colors duration-100"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             )}
@@ -275,9 +305,7 @@ function EditorPaneContent({
       </div>
 
       {/* Breadcrumbs */}
-      {activeTab && (
-        <Breadcrumbs filePath={activeTab} projectId={projectId} />
-      )}
+      {activeTab && <Breadcrumbs filePath={activeTab} projectId={projectId} />}
 
       {/* Editor */}
       {activeTab ? (
@@ -292,7 +320,17 @@ function EditorPaneContent({
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-surface-500 font-sans text-sm gap-3 bg-surface-100">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-surface-300">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-surface-300"
+          >
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
@@ -339,9 +377,7 @@ function useTemplateSetup(
         await createProject(decodedProjectId);
 
         if (template.files && template.files.length > 0) {
-          const steps: SetupStepState[] = [
-            { label: "Creating files...", status: "running" },
-          ];
+          const steps: SetupStepState[] = [{ label: "Creating files...", status: "running" }];
           setSetupSteps(steps);
 
           await uploadFiles(decodedProjectId, template.files);
@@ -351,12 +387,10 @@ function useTemplateSetup(
           onTreeUpdate(updatedTree);
           setSetupDone(true);
         } else if (template.commands && template.commands.length > 0) {
-          const initialSteps: SetupStepState[] = template.commands.map(
-            (cmd, i) => ({
-              label: i === 0 ? "Installing dependencies..." : `Running: ${cmd.substring(0, 60)}...`,
-              status: "pending" as const,
-            }),
-          );
+          const initialSteps: SetupStepState[] = template.commands.map((cmd, i) => ({
+            label: i === 0 ? "Installing dependencies..." : `Running: ${cmd.substring(0, 60)}...`,
+            status: "pending" as const,
+          }));
           const scanStep: SetupStepState = {
             label: "Scanning project files...",
             status: "pending",
@@ -366,9 +400,7 @@ function useTemplateSetup(
           for (let i = 0; i < template.commands.length; i++) {
             const cmd = template.commands[i];
             setSetupSteps((prev) =>
-              prev.map((s, idx) =>
-                idx === i ? { ...s, status: "running" } : s,
-              ),
+              prev.map((s, idx) => (idx === i ? { ...s, status: "running" } : s)),
             );
 
             const result = await executeTerminalCommand(decodedProjectId, cmd);
@@ -376,46 +408,34 @@ function useTemplateSetup(
             if (result.exitCode !== 0) {
               const errorMsg = result.stderr || "Command failed";
               setSetupSteps((prev) =>
-                prev.map((s, idx) =>
-                  idx === i
-                    ? { ...s, status: "error", error: errorMsg }
-                    : s,
-                ),
+                prev.map((s, idx) => (idx === i ? { ...s, status: "error", error: errorMsg } : s)),
               );
               setSetupError(`Command failed: ${cmd}`);
               return;
             }
 
             setSetupSteps((prev) =>
-              prev.map((s, idx) =>
-                idx === i ? { ...s, status: "done" } : s,
-              ),
+              prev.map((s, idx) => (idx === i ? { ...s, status: "done" } : s)),
             );
           }
 
           const scanIdx = template.commands.length;
           setSetupSteps((prev) =>
-            prev.map((s, idx) =>
-              idx === scanIdx ? { ...s, status: "running" } : s,
-            ),
+            prev.map((s, idx) => (idx === scanIdx ? { ...s, status: "running" } : s)),
           );
 
           const scannedTree = await scanWorkspace(decodedProjectId);
           onTreeUpdate(scannedTree);
 
           setSetupSteps((prev) =>
-            prev.map((s, idx) =>
-              idx === scanIdx ? { ...s, status: "done" } : s,
-            ),
+            prev.map((s, idx) => (idx === scanIdx ? { ...s, status: "done" } : s)),
           );
           setSetupDone(true);
         } else {
           setSetupDone(true);
         }
       } catch (err) {
-        setSetupError(
-          err instanceof Error ? err.message : "Setup failed",
-        );
+        setSetupError(err instanceof Error ? err.message : "Setup failed");
       }
     };
 
@@ -454,9 +474,10 @@ function ActivityBarIcon({
       title={title}
       className={`w-10 h-10 flex items-center justify-center border-none cursor-pointer rounded-lg
         transition-all duration-100
-        ${active
-          ? "bg-surface-300/50 text-surface-900 border-l-2 border-l-brand-500"
-          : "bg-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-300/30"
+        ${
+          active
+            ? "bg-surface-300/50 text-surface-900 border-l-2 border-l-brand-500"
+            : "bg-transparent text-surface-500 hover:text-surface-800 hover:bg-surface-300/30"
         }`}
     >
       {children}
@@ -482,9 +503,10 @@ function ToolbarButton({
       title={title}
       className={`px-3 py-1.5 text-xs font-medium rounded-md border cursor-pointer
         transition-all duration-100
-        ${active
-          ? "bg-brand-600 text-white border-brand-500 shadow-sm shadow-brand-600/20"
-          : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
+        ${
+          active
+            ? "bg-brand-600 text-white border-brand-500 shadow-sm shadow-brand-600/20"
+            : "bg-surface-200 text-surface-700 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
         }`}
     >
       {children}
@@ -492,11 +514,7 @@ function ToolbarButton({
   );
 }
 
-export default function ProjectPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
+export default function ProjectPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
   const decodedProjectId = decodeURIComponent(projectId);
 
@@ -546,7 +564,16 @@ export default function ProjectPage({
       terminalHeight,
       splitMode,
     });
-  }, [openTabs, activeTab, sidebarWidth, terminalOpen, terminalHeight, splitMode, sessionRestored, updateSession]);
+  }, [
+    openTabs,
+    activeTab,
+    sidebarWidth,
+    terminalOpen,
+    terminalHeight,
+    splitMode,
+    sessionRestored,
+    updateSession,
+  ]);
 
   const [userName, setUserName] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -561,19 +588,18 @@ export default function ProjectPage({
     modified: string;
   } | null>(null);
 
-  const handleMarkersChange = useCallback(
-    (markers: readonly ProblemEntry[]) => {
-      setProblems(markers);
-    },
-    [],
-  );
+  const handleMarkersChange = useCallback((markers: readonly ProblemEntry[]) => {
+    setProblems(markers);
+  }, []);
 
   const handleShowDiff = useCallback(
     async (filePath: string, _diff: string) => {
       const { gitShowFile } = await import("@/lib/git-api");
       const original = await gitShowFile(decodedProjectId, filePath).catch(() => "");
       // Get the working tree content via terminal cat
-      const result = await executeTerminalCommand(decodedProjectId, `cat "${filePath}"`).catch(() => ({ stdout: "", stderr: "", exitCode: 1 }));
+      const result = await executeTerminalCommand(decodedProjectId, `cat "${filePath}"`).catch(
+        () => ({ stdout: "", stderr: "", exitCode: 1 }),
+      );
       const modified = result.stdout;
       setDiffModal({ filePath, original, modified });
     },
@@ -593,12 +619,18 @@ export default function ProjectPage({
 
   const userColor = userName ? pickColor(userName) : "#808080";
   const cursorLine = cursorPosition?.line ?? null;
-  const otherUsers = useProjectPresence(decodedProjectId, userName, userColor, activeTab, cursorLine);
+  const otherUsers = useProjectPresence(
+    decodedProjectId,
+    userName,
+    userColor,
+    activeTab,
+    cursorLine,
+  );
   const [followingUser, setFollowingUser] = useState<string | null>(null);
 
   // Follow mode: when following a user, switch to their active file
   const followedUser = followingUser
-    ? otherUsers.find((u) => u.name === followingUser) ?? null
+    ? (otherUsers.find((u) => u.name === followingUser) ?? null)
     : null;
 
   useEffect(() => {
@@ -648,13 +680,11 @@ export default function ProjectPage({
     setTree(updated.tree);
   }, []);
 
-  const {
-    setupTemplate,
-    setupSteps,
-    setupDone,
-    setupError,
-    dismissSetup,
-  } = useTemplateSetup(decodedProjectId, tree, handleTreeUpdate);
+  const { setupTemplate, setupSteps, setupDone, setupError, dismissSetup } = useTemplateSetup(
+    decodedProjectId,
+    tree,
+    handleTreeUpdate,
+  );
 
   const handleFileSelect = useCallback((path: string) => {
     setOpenTabs((prev) => (prev.includes(path) ? prev : [...prev, path]));
@@ -706,9 +736,7 @@ export default function ProjectPage({
 
   const handleDeleteFile = useCallback((path: string) => {
     setOpenTabs((prev) => {
-      const updated = prev.filter(
-        (t) => t !== path && !t.startsWith(path + "/"),
-      );
+      const updated = prev.filter((t) => t !== path && !t.startsWith(path + "/"));
       setActiveTab((currentActive) => {
         if (!currentActive) return null;
         if (currentActive === path || currentActive.startsWith(path + "/")) {
@@ -720,9 +748,7 @@ export default function ProjectPage({
       return updated;
     });
     setRightPaneTabs((prev) => {
-      const updated = prev.filter(
-        (t) => t !== path && !t.startsWith(path + "/"),
-      );
+      const updated = prev.filter((t) => t !== path && !t.startsWith(path + "/"));
       setRightActiveTab((currentActive) => {
         if (!currentActive) return null;
         if (currentActive === path || currentActive.startsWith(path + "/")) {
@@ -742,9 +768,7 @@ export default function ProjectPage({
   const handleSplitRight = useCallback(() => {
     setSplitMode(true);
     if (activeTab) {
-      setRightPaneTabs((prev) =>
-        prev.includes(activeTab) ? prev : [...prev, activeTab],
-      );
+      setRightPaneTabs((prev) => (prev.includes(activeTab) ? prev : [...prev, activeTab]));
       setRightActiveTab(activeTab);
     }
   }, [activeTab]);
@@ -871,7 +895,16 @@ export default function ProjectPage({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <polyline points="16 18 22 12 16 6" />
                 <polyline points="8 6 2 12 8 18" />
               </svg>
@@ -884,13 +917,14 @@ export default function ProjectPage({
               {otherUsers.map((u) => (
                 <button
                   key={u.name}
-                  onClick={() => setFollowingUser((prev) => prev === u.name ? null : u.name)}
+                  onClick={() => setFollowingUser((prev) => (prev === u.name ? null : u.name))}
                   title={followingUser === u.name ? `Stop following ${u.name}` : `Follow ${u.name}`}
                   className={`text-[11px] px-2 py-0.5 rounded-full font-medium cursor-pointer
                     border transition-all duration-100
-                    ${followingUser === u.name
-                      ? "ring-2 ring-offset-1 ring-offset-surface-0"
-                      : "hover:scale-105"
+                    ${
+                      followingUser === u.name
+                        ? "ring-2 ring-offset-1 ring-offset-surface-0"
+                        : "hover:scale-105"
                     }`}
                   style={{
                     color: u.color,
@@ -928,7 +962,10 @@ export default function ProjectPage({
             History
           </ToolbarButton>
           {previewOpen && previewUrl && (
-            <ToolbarButton onClick={() => window.open(previewUrl, "_blank")} title="Open in new tab">
+            <ToolbarButton
+              onClick={() => window.open(previewUrl, "_blank")}
+              title="Open in new tab"
+            >
               Open in tab
             </ToolbarButton>
           )}
@@ -961,12 +998,38 @@ export default function ProjectPage({
               cursor-pointer transition-all duration-100"
           >
             {theme === "dark" ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
             ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             )}
           </button>
@@ -974,13 +1037,24 @@ export default function ProjectPage({
             onClick={() => setSettingsOpen(true)}
             title="Settings"
             className={`p-1.5 rounded-md border cursor-pointer transition-all duration-100
-              ${settingsOpen
-                ? "bg-brand-600 text-white border-brand-500"
-                : "bg-surface-200 text-surface-600 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
+              ${
+                settingsOpen
+                  ? "bg-brand-600 text-white border-brand-500"
+                  : "bg-surface-200 text-surface-600 border-surface-300/60 hover:bg-surface-300 hover:text-surface-800"
               }`}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
         </div>
@@ -988,10 +1062,7 @@ export default function ProjectPage({
 
       {/* Follow bar */}
       {followedUser && (
-        <FollowBar
-          following={followedUser}
-          onUnfollow={() => setFollowingUser(null)}
-        />
+        <FollowBar following={followedUser} onUnfollow={() => setFollowingUser(null)} />
       )}
 
       {/* Main content */}
@@ -1005,8 +1076,17 @@ export default function ProjectPage({
               onClick={() => setSidebarMode("explorer")}
               title="Explorer"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
             </ActivityBarIcon>
             <ActivityBarIcon
@@ -1014,8 +1094,18 @@ export default function ProjectPage({
               onClick={() => setSidebarMode("search")}
               title="Search (Ctrl+Shift+F)"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </ActivityBarIcon>
             <ActivityBarIcon
@@ -1023,8 +1113,20 @@ export default function ProjectPage({
               onClick={() => setSidebarMode("git")}
               title="Source Control (Ctrl+Shift+G)"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M18 9a9 9 0 0 1-9 9" />
               </svg>
             </ActivityBarIcon>
           </div>
@@ -1202,10 +1304,7 @@ export default function ProjectPage({
       </div>
 
       {/* Status bar */}
-      <StatusBar
-        language={activeLanguage}
-        cursorPosition={cursorPosition}
-      />
+      <StatusBar language={activeLanguage} cursorPosition={cursorPosition} />
 
       {quickOpenVisible && (
         <QuickOpen
@@ -1223,9 +1322,7 @@ export default function ProjectPage({
         />
       )}
 
-      {shortcutsOpen && (
-        <KeyboardShortcuts onClose={() => setShortcutsOpen(false)} />
-      )}
+      {shortcutsOpen && <KeyboardShortcuts onClose={() => setShortcutsOpen(false)} />}
 
       {setupTemplate && (
         <SetupProgress

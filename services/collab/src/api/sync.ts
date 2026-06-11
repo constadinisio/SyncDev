@@ -2,10 +2,7 @@ import type { ServerResponse } from "http";
 import { syncProjectToDisk } from "../persistence/disk-sync.js";
 import { log } from "../lib/logger.js";
 
-export function handleSyncRequest(
-  res: ServerResponse,
-  projectId: string,
-): void {
+export function handleSyncRequest(res: ServerResponse, projectId: string): void {
   log("sync", `syncing project "${projectId}" to disk...`);
   const count = syncProjectToDisk(projectId);
 

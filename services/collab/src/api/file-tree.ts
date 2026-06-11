@@ -14,8 +14,7 @@ import { deleteSnapshot } from "../persistence/snapshot-store.js";
 import { getRooms } from "../rooms/room-manager.js";
 import { destroyRoom } from "../rooms/room.js";
 
-const WORKSPACE_BASE =
-  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
+const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 const PROJECTS_DIR = process.env.PROJECTS_DIR ?? "./storage/projects";
 
@@ -92,20 +91,16 @@ function findParent(
 
   let current = tree;
   for (let i = 0; i < segments.length - 1; i++) {
-    const folder = current.find(
-      (n) => n.name === segments[i] && n.type === "folder",
-    ) as FolderNode | undefined;
+    const folder = current.find((n) => n.name === segments[i] && n.type === "folder") as
+      | FolderNode
+      | undefined;
     if (!folder) return { parent: null, name: segments[segments.length - 1] };
     current = folder.children;
   }
   return { parent: current, name: segments[segments.length - 1] };
 }
 
-export function createNode(
-  projectId: string,
-  path: string,
-  type: "file" | "folder",
-): ProjectTree {
+export function createNode(projectId: string, path: string, type: "file" | "folder"): ProjectTree {
   const project = loadProjectTree(projectId);
   const tree = structuredClone(project.tree) as TreeNode[];
   const segments = splitPath(path);
@@ -161,19 +156,21 @@ export function deleteNode(projectId: string, path: string): ProjectTree {
   parent.splice(idx, 1);
 
   // Collect all file paths that were deleted (for cleanup)
-  const deletedPaths = deletedNode.type === "file"
-    ? [path]
-    : collectAllPaths([deletedNode], path.substring(0, path.lastIndexOf("/") + 0) ? path.substring(0, path.length - name.length) : "").map(
-        (p) => {
+  const deletedPaths =
+    deletedNode.type === "file"
+      ? [path]
+      : collectAllPaths(
+          [deletedNode],
+          path.substring(0, path.lastIndexOf("/") + 0)
+            ? path.substring(0, path.length - name.length)
+            : "",
+        ).map((p) => {
           const base = path.substring(0, path.length - name.length);
           return base ? `${base}${p}` : p;
-        },
-      );
+        });
 
   // Actually, simpler: if it's a folder, collect paths from it
-  const pathsToClean = deletedNode.type === "file"
-    ? [path]
-    : collectAllPaths([deletedNode], path);
+  const pathsToClean = deletedNode.type === "file" ? [path] : collectAllPaths([deletedNode], path);
 
   // Clean up Yjs rooms and snapshots for deleted files
   const rooms = getRooms();
@@ -211,11 +208,7 @@ export function deleteNode(projectId: string, path: string): ProjectTree {
   return updated;
 }
 
-export function renameNode(
-  projectId: string,
-  oldPath: string,
-  newName: string,
-): ProjectTree {
+export function renameNode(projectId: string, oldPath: string, newName: string): ProjectTree {
   const project = loadProjectTree(projectId);
   const tree = structuredClone(project.tree) as TreeNode[];
   const segments = splitPath(oldPath);
@@ -265,9 +258,9 @@ export function moveNode(
     const targetSegments = splitPath(targetFolderPath);
     let current = tree;
     for (const seg of targetSegments) {
-      const folder = current.find(
-        (n) => n.name === seg && n.type === "folder",
-      ) as FolderNode | undefined;
+      const folder = current.find((n) => n.name === seg && n.type === "folder") as
+        | FolderNode
+        | undefined;
       if (!folder) {
         // Target folder not found, abort (re-add source)
         sourceParent.splice(sourceIdx, 0, sourceNode);
@@ -300,9 +293,7 @@ export function listProjects(): string[] {
   ensureDir(PROJECTS_DIR);
   try {
     const files = readdirSync(PROJECTS_DIR);
-    return files
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => f.replace(".json", ""));
+    return files.filter((f) => f.endsWith(".json")).map((f) => f.replace(".json", ""));
   } catch {
     return [];
   }

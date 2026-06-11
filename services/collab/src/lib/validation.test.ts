@@ -63,7 +63,9 @@ describe("cloneSchema", () => {
     expect(parseValue(cloneSchema, { repoUrl: "https://github.com/a/b.git" }).repoUrl).toContain(
       "github.com",
     );
-    expect(parseValue(cloneSchema, { repoUrl: "git@github.com:a/b.git" }).repoUrl).toContain("git@");
+    expect(parseValue(cloneSchema, { repoUrl: "git@github.com:a/b.git" }).repoUrl).toContain(
+      "git@",
+    );
   });
 
   it("rejects other schemes", () => {

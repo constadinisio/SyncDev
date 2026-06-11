@@ -4,8 +4,7 @@ import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { log, logError } from "../lib/logger.js";
 
-const WORKSPACE_BASE =
-  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
+const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 function getWorkspaceDir(projectId: string): string {
   const safeId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");

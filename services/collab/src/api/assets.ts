@@ -2,8 +2,7 @@ import type { ServerResponse } from "http";
 import { existsSync, readFileSync, statSync } from "fs";
 import { join, extname } from "path";
 
-const WORKSPACE_BASE =
-  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
+const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -25,13 +24,33 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 const IMAGE_EXTENSIONS = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".bmp",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".svg",
+  ".ico",
+  ".webp",
+  ".bmp",
 ]);
 
 const BINARY_EXTENSIONS = new Set([
   ...IMAGE_EXTENSIONS,
-  ".pdf", ".woff", ".woff2", ".ttf", ".mp3", ".wav", ".mp4", ".webm",
-  ".zip", ".tar", ".gz", ".exe", ".dll", ".so", ".dylib",
+  ".pdf",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".mp3",
+  ".wav",
+  ".mp4",
+  ".webm",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
 ]);
 
 export function isBinaryFile(fileName: string): boolean {
@@ -44,11 +63,7 @@ export function isImageFile(fileName: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-export function handleAssetRequest(
-  res: ServerResponse,
-  projectId: string,
-  filePath: string,
-): void {
+export function handleAssetRequest(res: ServerResponse, projectId: string, filePath: string): void {
   const safeProjectId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
   const fullPath = join(WORKSPACE_BASE, safeProjectId, filePath);
 
@@ -88,10 +103,7 @@ export interface AssetInfo {
   readonly isImage: boolean;
 }
 
-export function getAssetInfo(
-  projectId: string,
-  filePath: string,
-): AssetInfo | null {
+export function getAssetInfo(projectId: string, filePath: string): AssetInfo | null {
   const safeProjectId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
   const fullPath = join(WORKSPACE_BASE, safeProjectId, filePath);
 

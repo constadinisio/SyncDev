@@ -25,9 +25,7 @@ export function useProjectPresence(
   useEffect(() => {
     if (!userName) return;
 
-    const wsUrl =
-      process.env.NEXT_PUBLIC_COLLAB_WS_URL ??
-      `ws://${window.location.hostname}:4000`;
+    const wsUrl = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? `ws://${window.location.hostname}:4000`;
 
     const doc = new Y.Doc();
     const roomId = `${projectId}::__presence__`;

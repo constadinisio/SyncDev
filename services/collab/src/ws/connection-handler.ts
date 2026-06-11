@@ -2,16 +2,8 @@ import type { WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import * as encoding from "lib0/encoding";
 import * as awarenessProtocol from "y-protocols/awareness";
-import {
-  getOrCreateRoom,
-  addClient,
-  removeClient,
-} from "../rooms/room-manager.js";
-import {
-  handleMessage,
-  sendSyncStep1,
-  sendAwarenessState,
-} from "./message-handler.js";
+import { getOrCreateRoom, addClient, removeClient } from "../rooms/room-manager.js";
+import { handleMessage, sendSyncStep1, sendAwarenessState } from "./message-handler.js";
 import { notifyPreviewClients } from "../api/preview.js";
 import { log, logError } from "../lib/logger.js";
 import { authenticate, AuthRequiredError } from "../lib/auth.js";
@@ -111,8 +103,7 @@ export async function handleConnection(ws: WebSocket, req: IncomingMessage): Pro
 
     // Log the update with user info for history
     const localState = room.awareness.getStates().get(room.doc.clientID);
-    const userName =
-      (localState?.user as { name?: string } | undefined)?.name ?? "Unknown";
+    const userName = (localState?.user as { name?: string } | undefined)?.name ?? "Unknown";
     // Also try to find user from the origin (ws) client awareness
     let logUser = userName;
     room.awareness.getStates().forEach((state) => {
@@ -153,11 +144,7 @@ export async function handleConnection(ws: WebSocket, req: IncomingMessage): Pro
     if (previewReloadTimer) clearTimeout(previewReloadTimer);
     room.awareness.off("change", awarenessChangeHandler);
     room.doc.off("update", docUpdateHandler);
-    awarenessProtocol.removeAwarenessStates(
-      room.awareness,
-      [room.doc.clientID],
-      null,
-    );
+    awarenessProtocol.removeAwarenessStates(room.awareness, [room.doc.clientID], null);
     removeClient(room, ws);
   });
 

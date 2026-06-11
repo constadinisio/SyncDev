@@ -13,8 +13,7 @@ const middleware = auth((req) => {
   if (!authEnabled) return;
 
   const { pathname } = req.nextUrl;
-  const isPublic =
-    pathname.startsWith("/api/auth") || pathname.startsWith("/api/collab-token");
+  const isPublic = pathname.startsWith("/api/auth") || pathname.startsWith("/api/collab-token");
 
   if (!req.auth && !isPublic) {
     const signInUrl = new URL("/api/auth/signin", req.nextUrl.origin);

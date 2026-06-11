@@ -1,16 +1,11 @@
 import type { ServerResponse } from "http";
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
-import {
-  loadProjectTree,
-  createNode,
-  type TreeNode,
-} from "./file-tree.js";
+import { loadProjectTree, createNode, type TreeNode } from "./file-tree.js";
 import { getOrCreateRoom } from "../rooms/room-manager.js";
 import { log, logError } from "../lib/logger.js";
 
-const WORKSPACE_BASE =
-  process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
+const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -43,13 +38,8 @@ interface ScannedFile {
   readonly content: string;
 }
 
-function scanDirectory(
-  baseDir: string,
-  relativePath: string,
-): readonly ScannedFile[] {
-  const fullPath = relativePath
-    ? join(baseDir, relativePath)
-    : baseDir;
+function scanDirectory(baseDir: string, relativePath: string): readonly ScannedFile[] {
+  const fullPath = relativePath ? join(baseDir, relativePath) : baseDir;
 
   if (!existsSync(fullPath)) return [];
 
@@ -59,9 +49,7 @@ function scanDirectory(
     const entries = readdirSync(fullPath, { withFileTypes: true });
 
     for (const entry of entries) {
-      const entryRelative = relativePath
-        ? `${relativePath}/${entry.name}`
-        : entry.name;
+      const entryRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
 
       if (entry.isDirectory()) {
         if (SKIP_DIRS.has(entry.name)) continue;
@@ -96,11 +84,7 @@ function scanDirectory(
   return results;
 }
 
-function setFileContent(
-  projectId: string,
-  filePath: string,
-  content: string,
-): void {
+function setFileContent(projectId: string, filePath: string, content: string): void {
   const roomId = `${projectId}::${filePath}`;
   const room = getOrCreateRoom(roomId);
   const ytext = room.doc.getText("content");
@@ -118,10 +102,7 @@ function ensureFoldersExist(projectId: string, filePath: string): void {
   }
 }
 
-export function handleScanRequest(
-  res: ServerResponse,
-  projectId: string,
-): void {
+export function handleScanRequest(res: ServerResponse, projectId: string): void {
   try {
     const workspaceDir = getWorkspaceDir(projectId);
 
@@ -153,11 +134,7 @@ export function handleScanRequest(
   }
 }
 
-function writeJson(
-  res: ServerResponse,
-  status: number,
-  data: unknown,
-): void {
+function writeJson(res: ServerResponse, status: number, data: unknown): void {
   res.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",

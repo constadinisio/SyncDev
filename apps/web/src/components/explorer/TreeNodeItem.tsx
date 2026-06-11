@@ -152,11 +152,12 @@ export function TreeNodeItem({
         onDrop={handleDrop}
         className={`flex items-center gap-1 py-[3px] pr-2 cursor-pointer text-[13px] font-sans
           select-none whitespace-nowrap overflow-hidden text-ellipsis transition-colors duration-75
-          ${dragOver
-            ? "bg-brand-600/20"
-            : isActive
-              ? "bg-surface-300/50 text-surface-950"
-              : "text-surface-700 hover:bg-surface-200"
+          ${
+            dragOver
+              ? "bg-brand-600/20"
+              : isActive
+                ? "bg-surface-300/50 text-surface-950"
+                : "text-surface-700 hover:bg-surface-200"
           }`}
         style={{ paddingLeft: depth * 16 + 8 }}
       >
@@ -193,9 +194,7 @@ export function TreeNodeItem({
         <div>
           {node.children.map((child) => {
             const childPath = `${path}/${child.name}`;
-            const childPresence = allPresence?.filter(
-              (u) => u.activeFile === childPath,
-            );
+            const childPresence = allPresence?.filter((u) => u.activeFile === childPath);
             return (
               <TreeNodeItem
                 key={child.name}

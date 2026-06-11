@@ -27,11 +27,7 @@ function inferLanguage(roomId: string): string {
   return languageMap[ext ?? ""] ?? "plaintext";
 }
 
-export default function EditorPage({
-  params,
-}: {
-  params: { roomId: string };
-}) {
+export default function EditorPage({ params }: { params: { roomId: string } }) {
   const { roomId } = params;
   const decodedRoomId = decodeURIComponent(roomId);
   const connection = useYjsConnection(decodedRoomId);

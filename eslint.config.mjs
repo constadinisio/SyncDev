@@ -12,7 +12,11 @@ export default tseslint.config(
       "**/.next/**",
       "**/dist/**",
       "**/build/**",
+      "**/coverage/**",
       "apps/web/.next/**",
+      // Static assets served as-is, including the service worker which runs in
+      // a ServiceWorker global scope ESLint doesn't model.
+      "apps/web/public/**",
     ],
   },
   {

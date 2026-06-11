@@ -5,7 +5,10 @@ const SECRET = "0123456789abcdef0123456789abcdef";
 
 // Configure the environment before importing modules that read config at load.
 let authMod: typeof import("./auth.js");
-let mintToken: (claims: Record<string, unknown>, opts?: { issuer?: string; audience?: string; expired?: boolean }) => Promise<string>;
+let mintToken: (
+  claims: Record<string, unknown>,
+  opts?: { issuer?: string; audience?: string; expired?: boolean },
+) => Promise<string>;
 
 beforeAll(async () => {
   process.env.NODE_ENV = "production";

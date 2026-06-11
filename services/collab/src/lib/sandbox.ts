@@ -114,7 +114,7 @@ export function runInDocker(
             stderr: truncate(stderr || error.message || "Command failed"),
             exitCode:
               typeof (error as { code?: unknown }).code === "number"
-                ? ((error as { code: number }).code)
+                ? (error as { code: number }).code
                 : 1,
           });
           return;

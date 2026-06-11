@@ -32,9 +32,18 @@ export function FileIcon({ name, type, expanded }: FileIconProps) {
   if (type === "folder") {
     return (
       <span className="w-4 text-center shrink-0">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          className={`text-amber-400 transition-transform duration-100 ${expanded ? "" : "-rotate-90"}`}>
-          <polyline points="6 9 12 15 18 9"/>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`text-amber-400 transition-transform duration-100 ${expanded ? "" : "-rotate-90"}`}
+        >
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </span>
     );
@@ -43,7 +52,7 @@ export function FileIcon({ name, type, expanded }: FileIconProps) {
   return (
     <span className="w-4 text-center text-xs shrink-0" style={{ color: getExtColor(name) }}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-        <circle cx="12" cy="12" r="4"/>
+        <circle cx="12" cy="12" r="4" />
       </svg>
     </span>
   );
