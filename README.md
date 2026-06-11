@@ -183,6 +183,27 @@ docker compose up --build
 - **Packaging:** archiver (ZIP export), marked (Markdown)
 - **Deploy:** Docker Compose
 
+## Production / Deployment
+
+For a full production deployment with TLS termination (Caddy + Let's Encrypt),
+GitHub OAuth, the Docker-sandboxed terminal, and backup guidance, see
+[DEPLOYMENT.md](./DEPLOYMENT.md).
+
+```bash
+cd infra
+cp .env.example .env  # fill in secrets and domain
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+## Security
+
+- **Authentication:** Optional GitHub OAuth via Auth.js; off by default for local dev, enforced in production.
+- **CORS allowlist:** `ALLOWED_ORIGINS` env var controls which browser origins may call the API/WS — no wildcard accepted in production.
+- **Input validation:** All API payloads validated with [zod](https://zod.dev); path-traversal attacks blocked on every file operation.
+- **Rate limiting:** Applied to terminal execution, clone, upload, and scan endpoints to prevent abuse.
+- **Terminal sandbox:** User commands run in ephemeral Docker containers with dropped capabilities, non-root user, read-only root filesystem, and memory/CPU/PID limits.
+- **Health checks:** `GET /api/health` (web, returns `{"status":"ok"}`) and `GET /health` (collab) for orchestrator liveness probes and rolling-update gating.
+
 ## Limitations
 
 - No authentication — anyone with the URL can edit (suitable for local/Tailscale networks)
