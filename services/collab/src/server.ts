@@ -5,6 +5,7 @@ import { handleApiRequest } from "./api/routes.js";
 import { initRoomManager, shutdownRoomManager } from "./rooms/room-manager.js";
 import { loadConfig, type AppConfig } from "./lib/config.js";
 import { markReady, markNotReady } from "./lib/readiness.js";
+import { checkDockerAvailable } from "./lib/sandbox.js";
 import { log, logError } from "./lib/logger.js";
 
 // Validate configuration before anything else: fail fast on misconfiguration.
@@ -47,6 +48,11 @@ const shutdown = () => {
 
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
+
+// When terminal commands run in Docker, surface daemon availability at boot.
+if (config.terminal.useDocker) {
+  checkDockerAvailable();
+}
 
 httpServer.listen(config.port, config.host, () => {
   markReady();

@@ -30,6 +30,25 @@ export interface AppConfig {
   readonly authEnforced: boolean;
   /** Shared HS256 secret used to verify tokens minted by the web app. */
   readonly collabJwtSecret: string | undefined;
+  /** Terminal command isolation. */
+  readonly terminal: TerminalSandboxConfig;
+}
+
+export interface TerminalSandboxConfig {
+  /** Run commands inside an ephemeral Docker container. Defaults to production. */
+  readonly useDocker: boolean;
+  readonly image: string;
+  readonly memory: string;
+  readonly cpus: string;
+  readonly pidsLimit: number;
+  /** Container network mode: "bridge" (outbound allowed) or "none" (offline). */
+  readonly network: string;
+  /**
+   * Host path of the workspaces dir, used to translate bind mounts when this
+   * service itself runs in a container and spawns sibling containers via the
+   * host Docker socket. Empty means "paths are already host paths".
+   */
+  readonly hostWorkspaceBase: string;
 }
 
 class ConfigError extends Error {
@@ -127,6 +146,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     rateLimitMax: parseInteger("RATE_LIMIT_MAX", env.RATE_LIMIT_MAX, 30),
     authEnforced,
     collabJwtSecret,
+    terminal: Object.freeze({
+      useDocker: parseBoolean("TERMINAL_SANDBOX_DOCKER", env.TERMINAL_SANDBOX_DOCKER, isProduction),
+      image: env.SANDBOX_IMAGE ?? "node:20-bookworm-slim",
+      memory: env.SANDBOX_MEMORY ?? "512m",
+      cpus: env.SANDBOX_CPUS ?? "1",
+      pidsLimit: parseInteger("SANDBOX_PIDS_LIMIT", env.SANDBOX_PIDS_LIMIT, 512),
+      network: env.SANDBOX_NETWORK ?? "bridge",
+      hostWorkspaceBase: env.SANDBOX_HOST_WORKSPACE_BASE?.trim() ?? "",
+    }),
   });
 
   cached = resolved;

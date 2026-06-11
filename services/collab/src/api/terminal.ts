@@ -3,7 +3,10 @@ import { exec } from "child_process";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { log, logError } from "../lib/logger.js";
+import { loadConfig } from "../lib/config.js";
+import { runInDocker } from "../lib/sandbox.js";
 
+const config = loadConfig();
 const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 const MAX_COMMAND_LENGTH = 4000;
 const MAX_OUTPUT_LENGTH = 100_000;
@@ -152,17 +155,35 @@ export async function handleTerminalRequest(
     return;
   }
 
-  if (isCommandBlocked(command)) {
+  // The host-side blocklist is a fragile defense only relevant when commands
+  // run directly on the host (dev). In Docker mode, container isolation is the
+  // real boundary, so the blocklist is skipped.
+  if (!config.terminal.useDocker && isCommandBlocked(command)) {
     writeJson(res, 403, { error: "This command is not allowed" });
     return;
   }
 
   const cwd = getWorkspaceDir(projectId);
   const timeoutMs = getTimeoutMs(command);
-  log("terminal", `[${projectId}] $ ${command.substring(0, 200)} (timeout: ${timeoutMs / 1000}s, cwd: ${cwd})`);
+  const mode = config.terminal.useDocker ? "docker" : "host";
+  log(
+    "terminal",
+    `[${projectId}] (${mode}) $ ${command.substring(0, 200)} (timeout: ${timeoutMs / 1000}s)`,
+  );
 
   try {
-    const result = await executeCommand(command, cwd, timeoutMs);
+    let result;
+    if (config.terminal.useDocker) {
+      // When this service runs in a container, the bind-mount source must be a
+      // host path. Translate <WORKSPACE_BASE>/<id> to <hostBase>/<id>.
+      const safeId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const mountSource = config.terminal.hostWorkspaceBase
+        ? join(config.terminal.hostWorkspaceBase, safeId)
+        : cwd;
+      result = await runInDocker(mountSource, command, timeoutMs, projectId);
+    } else {
+      result = await executeCommand(command, cwd, timeoutMs);
+    }
     writeJson(res, 200, result);
   } catch (err) {
     logError("terminal", "unexpected error executing command", err);
