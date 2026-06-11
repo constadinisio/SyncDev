@@ -46,4 +46,5 @@ jobs:
       - name: Test (web)
         run: npm -w apps/web run test
 
-      # Coverage gate is enforced once suites land (task #12).
+      - name: Test (collab) with coverage gate
+        run: npm -w services/collab run test:coverage

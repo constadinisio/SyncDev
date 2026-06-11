@@ -2,6 +2,7 @@ node_modules/
 dist/
 .next/
 *.tsbuildinfo
+coverage/
 
 # Storage (runtime data) — any location
 storage/snapshots/*.ystate
