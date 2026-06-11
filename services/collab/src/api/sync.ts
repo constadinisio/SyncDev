@@ -1,16 +1,10 @@
 import type { ServerResponse } from "http";
 import { syncProjectToDisk } from "../persistence/disk-sync.js";
 import { log } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
-export function handleSyncRequest(res: ServerResponse, projectId: string): void {
+export function handleSyncRequest(res: ServerResponse, projectId: string, origin?: string): void {
   log("sync", `syncing project "${projectId}" to disk...`);
   const count = syncProjectToDisk(projectId);
-
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify({ synced: count }));
+  writeJson(res, 200, { synced: count }, origin);
 }

@@ -6,6 +6,7 @@ import type { TreeNode } from "./file-tree.js";
 import { getOrCreateRoom } from "../rooms/room-manager.js";
 import * as Y from "yjs";
 import { log } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
 function collectFilePaths(nodes: readonly TreeNode[], prefix: string): string[] {
   const paths: string[] = [];
@@ -44,9 +45,10 @@ export function handleReplaceRequest(
   query: string,
   replacement: string,
   isRegex: boolean = false,
+  origin?: string,
 ): void {
   if (!query) {
-    writeJson(res, 400, { error: "query is required" });
+    writeJson(res, 400, { error: "query is required" }, origin);
     return;
   }
 
@@ -74,7 +76,7 @@ export function handleReplaceRequest(
           return result;
         });
       } catch {
-        writeJson(res, 400, { error: "Invalid regex pattern" });
+        writeJson(res, 400, { error: "Invalid regex pattern" }, origin);
         return;
       }
     } else {
@@ -115,15 +117,5 @@ export function handleReplaceRequest(
   }
 
   log("replace", `replaced ${totalReplacements} occurrence(s) in project "${projectId}"`);
-  writeJson(res, 200, { replacements: totalReplacements });
-}
-
-function writeJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
+  writeJson(res, 200, { replacements: totalReplacements }, origin);
 }

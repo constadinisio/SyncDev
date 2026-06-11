@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { getOrCreateRoom, getRooms } from "../rooms/room-manager.js";
 import { log } from "../lib/logger.js";
+import { buildCorsHeaders } from "../lib/http.js";
 
 // --- MIME types ---
 
@@ -67,12 +68,13 @@ export function handlePreviewEvents(
   req: IncomingMessage,
   res: ServerResponse,
   projectId: string,
+  origin?: string,
 ): void {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
-    "Access-Control-Allow-Origin": "*",
+    ...buildCorsHeaders(origin),
   });
   res.write("data: connected\n\n");
 
@@ -96,6 +98,7 @@ export function handlePreviewRequest(
   res: ServerResponse,
   projectId: string,
   filePath: string,
+  origin?: string,
 ): void {
   // The room ID format is "projectId::filePath"
   const roomId = `${projectId}::${filePath}`;
@@ -115,15 +118,15 @@ export function handlePreviewRequest(
 
     res.writeHead(200, {
       "Content-Type": mime,
-      "Access-Control-Allow-Origin": "*",
       "Cache-Control": "no-cache",
+      ...buildCorsHeaders(origin),
     });
     res.end(injected);
   } else {
     res.writeHead(200, {
       "Content-Type": mime,
-      "Access-Control-Allow-Origin": "*",
       "Cache-Control": "no-cache",
+      ...buildCorsHeaders(origin),
     });
     res.end(content);
   }

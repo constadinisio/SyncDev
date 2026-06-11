@@ -4,6 +4,7 @@ import { join } from "path";
 import { loadProjectTree, createNode, type TreeNode } from "./file-tree.js";
 import { getOrCreateRoom } from "../rooms/room-manager.js";
 import { log, logError } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
 const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
@@ -102,12 +103,12 @@ function ensureFoldersExist(projectId: string, filePath: string): void {
   }
 }
 
-export function handleScanRequest(res: ServerResponse, projectId: string): void {
+export function handleScanRequest(res: ServerResponse, projectId: string, origin?: string): void {
   try {
     const workspaceDir = getWorkspaceDir(projectId);
 
     if (!existsSync(workspaceDir)) {
-      writeJson(res, 200, loadProjectTree(projectId));
+      writeJson(res, 200, loadProjectTree(projectId), origin);
       return;
     }
 
@@ -125,21 +126,11 @@ export function handleScanRequest(res: ServerResponse, projectId: string): void 
     const updatedTree = loadProjectTree(projectId);
     log("scan", `scan complete for "${projectId}": ${files.length} files loaded`);
 
-    writeJson(res, 200, updatedTree);
+    writeJson(res, 200, updatedTree, origin);
   } catch (err) {
     logError("scan", `failed to scan workspace for "${projectId}"`, err);
     if (!res.headersSent) {
-      writeJson(res, 500, { error: "Failed to scan workspace" });
+      writeJson(res, 500, { error: "Failed to scan workspace" }, origin);
     }
   }
-}
-
-function writeJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
 }

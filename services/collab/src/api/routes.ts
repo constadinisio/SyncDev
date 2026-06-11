@@ -19,7 +19,8 @@ import { handleAssetRequest } from "./assets.js";
 import { handleReplaceRequest } from "./replace.js";
 import { handleSyncRequest } from "./sync.js";
 import { logError } from "../lib/logger.js";
-import { loadConfig, isOriginAllowed } from "../lib/config.js";
+import { loadConfig } from "../lib/config.js";
+import { buildCorsHeaders, writeJson } from "../lib/http.js";
 import { isServerReady } from "../lib/readiness.js";
 import { RateLimiter, getClientIp } from "../lib/rate-limit.js";
 import { authenticate, AuthRequiredError, type AuthUser } from "../lib/auth.js";
@@ -54,39 +55,8 @@ const SENSITIVE_ROUTE = /^\/api\/(terminal|clone|upload|scan)\//;
 // Periodically reclaim memory from expired rate-limit buckets.
 setInterval(() => sensitiveLimiter.sweep(Date.now()), 60_000).unref();
 
-/**
- * Builds CORS headers for a request, echoing back the Origin only when it is
- * on the configured allowlist. Unknown origins receive no CORS grant, so the
- * browser blocks the cross-origin read.
- */
-function corsHeaders(origin: string | undefined): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    Vary: "Origin",
-  };
-  if (isOriginAllowed(origin, config)) {
-    headers["Access-Control-Allow-Origin"] = origin as string;
-    headers["Access-Control-Allow-Credentials"] = "true";
-  }
-  return headers;
-}
-
-function writeJson(
-  res: ServerResponse,
-  status: number,
-  data: unknown,
-  origin: string | undefined,
-): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    ...corsHeaders(origin),
-  });
-  res.end(JSON.stringify(data));
-}
-
 function writeCors(res: ServerResponse, origin: string | undefined): void {
-  res.writeHead(204, corsHeaders(origin));
+  res.writeHead(204, buildCorsHeaders(origin));
   res.end();
 }
 
@@ -211,7 +181,7 @@ export async function handleApiRequest(
   if (sseMatch && method === "GET") {
     const pid = decodeURIComponent(sseMatch[1]);
     if (!authorize(pid)) return true;
-    handlePreviewEvents(req, res, pid);
+    handlePreviewEvents(req, res, pid, origin);
     return true;
   }
 
@@ -221,7 +191,7 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(previewMatch[1]);
     if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(previewMatch[2]);
-    handlePreviewRequest(req, res, pid, filePath);
+    handlePreviewRequest(req, res, pid, filePath, origin);
     return true;
   }
 
@@ -233,7 +203,7 @@ export async function handleApiRequest(
     const urlObj = new URL(url, "http://localhost");
     const query = urlObj.searchParams.get("q") ?? "";
     const isRegex = urlObj.searchParams.get("regex") === "1";
-    handleSearchRequest(res, pid, query, isRegex);
+    handleSearchRequest(res, pid, query, isRegex, origin);
     return true;
   }
 
@@ -244,7 +214,7 @@ export async function handleApiRequest(
       const pid = parseValue(projectIdSchema, decodeURIComponent(terminalMatch[1]));
       if (!authorize(pid)) return true;
       const { command } = parseJson(terminalSchema, await readBody(req));
-      await handleTerminalRequest(res, pid, command);
+      await handleTerminalRequest(res, pid, command, origin);
     } catch (err) {
       fail(err, "failed to execute terminal command");
     }
@@ -257,7 +227,7 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(historyMatch[1]);
     if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(historyMatch[2]);
-    handleHistoryRequest(res, pid, filePath);
+    handleHistoryRequest(res, pid, filePath, origin);
     return true;
   }
 
@@ -266,7 +236,7 @@ export async function handleApiRequest(
   if (downloadMatch && method === "GET") {
     const pid = decodeURIComponent(downloadMatch[1]);
     if (!authorize(pid)) return true;
-    handleDownloadRequest(res, pid);
+    handleDownloadRequest(res, pid, origin);
     return true;
   }
 
@@ -276,7 +246,7 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(scanMatch[1]);
     if (!authorize(pid)) return true;
     try {
-      handleScanRequest(res, pid);
+      handleScanRequest(res, pid, origin);
     } catch (err) {
       logError("api", "failed to scan workspace", err);
       json(res, 500, { error: "internal error" });
@@ -291,7 +261,7 @@ export async function handleApiRequest(
     if (!authorize(pid)) return true;
     try {
       const body = await readBody(req);
-      handleUploadRequest(res, pid, body);
+      handleUploadRequest(res, pid, body, origin);
     } catch (err) {
       logError("api", "failed to handle upload", err);
       json(res, 500, { error: "internal error" });
@@ -304,7 +274,7 @@ export async function handleApiRequest(
   if (syncMatch && method === "POST") {
     const pid = decodeURIComponent(syncMatch[1]);
     if (!authorize(pid)) return true;
-    handleSyncRequest(res, pid);
+    handleSyncRequest(res, pid, origin);
     return true;
   }
 
@@ -317,7 +287,7 @@ export async function handleApiRequest(
     const query = urlObj.searchParams.get("q") ?? "";
     const replacement = urlObj.searchParams.get("replace") ?? "";
     const isRegex = urlObj.searchParams.get("regex") === "1";
-    handleReplaceRequest(res, pid, query, replacement, isRegex);
+    handleReplaceRequest(res, pid, query, replacement, isRegex, origin);
     return true;
   }
 
@@ -328,7 +298,7 @@ export async function handleApiRequest(
       const pid = parseValue(projectIdSchema, decodeURIComponent(cloneMatch[1]));
       if (!authorize(pid)) return true;
       const { repoUrl } = parseJson(cloneSchema, await readBody(req));
-      await handleCloneRequest(res, pid, repoUrl);
+      await handleCloneRequest(res, pid, repoUrl, origin);
     } catch (err) {
       fail(err, "failed to clone repository");
     }
@@ -341,7 +311,7 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(assetMatch[1]);
     if (!authorize(pid)) return true;
     const filePath = decodeURIComponent(assetMatch[2]);
-    handleAssetRequest(res, pid, filePath);
+    handleAssetRequest(res, pid, filePath, origin);
     return true;
   }
 

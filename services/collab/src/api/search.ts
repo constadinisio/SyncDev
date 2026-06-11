@@ -5,6 +5,7 @@ import { loadProjectTree } from "./file-tree.js";
 import type { TreeNode } from "./file-tree.js";
 import * as Y from "yjs";
 import { log } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
 interface SearchMatch {
   readonly filePath: string;
@@ -118,9 +119,10 @@ export function handleSearchRequest(
   projectId: string,
   query: string,
   isRegex: boolean = false,
+  origin?: string,
 ): void {
   if (!query || query.length < 1) {
-    writeJson(res, 200, { matches: [] });
+    writeJson(res, 200, { matches: [] }, origin);
     return;
   }
 
@@ -143,15 +145,5 @@ export function handleSearchRequest(
     "search",
     `found ${allMatches.length} matches for "${query}" (regex: ${isRegex}) in project "${projectId}"`,
   );
-  writeJson(res, 200, { matches: allMatches });
-}
-
-function writeJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
+  writeJson(res, 200, { matches: allMatches }, origin);
 }

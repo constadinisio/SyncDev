@@ -5,6 +5,7 @@ import { join } from "path";
 import { log, logError } from "../lib/logger.js";
 import { loadConfig } from "../lib/config.js";
 import { runInDocker } from "../lib/sandbox.js";
+import { writeJson } from "../lib/http.js";
 
 const config = loadConfig();
 const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
@@ -146,16 +147,20 @@ export async function handleTerminalRequest(
   res: ServerResponse,
   projectId: string,
   command: string,
+  origin?: string,
 ): Promise<void> {
   if (!command || typeof command !== "string") {
-    writeJson(res, 400, { error: "command is required" });
+    writeJson(res, 400, { error: "command is required" }, origin);
     return;
   }
 
   if (command.length > MAX_COMMAND_LENGTH) {
-    writeJson(res, 400, {
-      error: `Command exceeds maximum length of ${MAX_COMMAND_LENGTH} characters`,
-    });
+    writeJson(
+      res,
+      400,
+      { error: `Command exceeds maximum length of ${MAX_COMMAND_LENGTH} characters` },
+      origin,
+    );
     return;
   }
 
@@ -163,7 +168,7 @@ export async function handleTerminalRequest(
   // run directly on the host (dev). In Docker mode, container isolation is the
   // real boundary, so the blocklist is skipped.
   if (!config.terminal.useDocker && isCommandBlocked(command)) {
-    writeJson(res, 403, { error: "This command is not allowed" });
+    writeJson(res, 403, { error: "This command is not allowed" }, origin);
     return;
   }
 
@@ -188,23 +193,9 @@ export async function handleTerminalRequest(
     } else {
       result = await executeCommand(command, cwd, timeoutMs);
     }
-    writeJson(res, 200, result);
+    writeJson(res, 200, result, origin);
   } catch (err) {
     logError("terminal", "unexpected error executing command", err);
-    writeJson(res, 500, {
-      stdout: "",
-      stderr: "Internal server error",
-      exitCode: 1,
-    });
+    writeJson(res, 500, { stdout: "", stderr: "Internal server error", exitCode: 1 }, origin);
   }
-}
-
-function writeJson(res: ServerResponse, status: number, data: unknown): void {
-  res.writeHead(status, {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  res.end(JSON.stringify(data));
 }

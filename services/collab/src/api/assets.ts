@@ -1,6 +1,7 @@
 import type { ServerResponse } from "http";
 import { existsSync, readFileSync, statSync } from "fs";
 import { join, extname } from "path";
+import { buildCorsHeaders } from "../lib/http.js";
 
 const WORKSPACE_BASE = process.env.TERMINAL_WORKSPACE_DIR ?? "./storage/workspaces";
 
@@ -63,7 +64,12 @@ export function isImageFile(fileName: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-export function handleAssetRequest(res: ServerResponse, projectId: string, filePath: string): void {
+export function handleAssetRequest(
+  res: ServerResponse,
+  projectId: string,
+  filePath: string,
+  origin?: string,
+): void {
   const safeProjectId = projectId.replace(/[^a-zA-Z0-9._-]/g, "_");
   const fullPath = join(WORKSPACE_BASE, safeProjectId, filePath);
 
@@ -90,8 +96,8 @@ export function handleAssetRequest(res: ServerResponse, projectId: string, fileP
   res.writeHead(200, {
     "Content-Type": mime,
     "Content-Length": stat.size,
-    "Access-Control-Allow-Origin": "*",
     "Cache-Control": "no-cache",
+    ...buildCorsHeaders(origin),
   });
   res.end(data);
 }

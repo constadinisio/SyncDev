@@ -1,7 +1,8 @@
 import type { ServerResponse } from "http";
-import { loadProjectTree, createNode, type TreeNode, type FolderNode } from "./file-tree.js";
+import { loadProjectTree, createNode } from "./file-tree.js";
 import { getOrCreateRoom } from "../rooms/room-manager.js";
 import { log, logError } from "../lib/logger.js";
+import { writeJson } from "../lib/http.js";
 
 interface UploadFile {
   readonly path: string;
@@ -31,16 +32,17 @@ function setFileContent(projectId: string, filePath: string, content: string): v
   });
 }
 
-export function handleUploadRequest(res: ServerResponse, projectId: string, body: string): void {
+export function handleUploadRequest(
+  res: ServerResponse,
+  projectId: string,
+  body: string,
+  origin?: string,
+): void {
   try {
     const payload: UploadPayload = JSON.parse(body);
 
     if (!payload.files || !Array.isArray(payload.files)) {
-      res.writeHead(400, {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      });
-      res.end(JSON.stringify({ error: "files array is required" }));
+      writeJson(res, 400, { error: "files array is required" }, origin);
       return;
     }
 
@@ -63,22 +65,11 @@ export function handleUploadRequest(res: ServerResponse, projectId: string, body
 
     // Return the updated tree
     const updatedTree = loadProjectTree(projectId);
-
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    });
-    res.end(JSON.stringify(updatedTree));
+    writeJson(res, 200, updatedTree, origin);
   } catch (err) {
     logError("upload", `failed to upload files for project "${projectId}"`, err);
     if (!res.headersSent) {
-      res.writeHead(500, {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      });
-      res.end(JSON.stringify({ error: "Failed to upload files" }));
+      writeJson(res, 500, { error: "Failed to upload files" }, origin);
     }
   }
 }
