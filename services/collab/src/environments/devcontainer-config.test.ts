@@ -63,3 +63,33 @@ describe("parseDevcontainer", () => {
     ).toThrow();
   });
 });
+
+import { describe as describe2, it as it2, expect as expect2, beforeAll, afterAll } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { loadProjectDevcontainer } from "./devcontainer-config.js";
+
+describe2("loadProjectDevcontainer", () => {
+  let dir: string;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "syncdev-dc-"));
+    mkdirSync(join(dir, "proj-with", ".devcontainer"), { recursive: true });
+    writeFileSync(
+      join(dir, "proj-with", ".devcontainer", "devcontainer.json"),
+      JSON.stringify({ image: "python:3.12" }),
+    );
+    mkdirSync(join(dir, "proj-without"), { recursive: true });
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it2("reads an existing devcontainer.json", () => {
+    const cfg = loadProjectDevcontainer(join(dir, "proj-with"), DEFAULT_IMAGE);
+    expect2(cfg.image).toBe("python:3.12");
+  });
+
+  it2("falls back to the default when absent", () => {
+    const cfg = loadProjectDevcontainer(join(dir, "proj-without"), DEFAULT_IMAGE);
+    expect2(cfg.image).toBe(DEFAULT_IMAGE);
+  });
+});

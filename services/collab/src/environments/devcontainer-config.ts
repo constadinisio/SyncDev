@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { z } from "zod";
 import type { ResolvedDevcontainerConfig } from "./types.js";
 
@@ -32,6 +34,16 @@ export function defaultDevcontainer(defaultImage: string): ResolvedDevcontainerC
     remoteUser: "node",
     workspaceFolder: "/workspace",
   };
+}
+
+/** Loads `.devcontainer/devcontainer.json` from a workspace dir, or the default. */
+export function loadProjectDevcontainer(
+  workspaceDir: string,
+  defaultImage: string,
+): ResolvedDevcontainerConfig {
+  const path = join(workspaceDir, ".devcontainer", "devcontainer.json");
+  if (!existsSync(path)) return defaultDevcontainer(defaultImage);
+  return parseDevcontainer(readFileSync(path, "utf-8"), defaultImage);
 }
 
 /** Parses devcontainer.json text into a resolved config. Throws on invalid input. */
