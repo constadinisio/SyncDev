@@ -18,6 +18,7 @@ import { handleCloneRequest } from "./clone.js";
 import { handleAssetRequest } from "./assets.js";
 import { handleReplaceRequest } from "./replace.js";
 import { handleSyncRequest } from "./sync.js";
+import { handleEnvStatus, handleEnvAction, handleEnvEvents } from "./environments.js";
 import { logError } from "../lib/logger.js";
 import { loadConfig } from "../lib/config.js";
 import { buildCorsHeaders, writeJson } from "../lib/http.js";
@@ -50,7 +51,7 @@ const sensitiveLimiter = new RateLimiter({
   windowMs: config.rateLimitWindowMs,
   max: config.rateLimitMax,
 });
-const SENSITIVE_ROUTE = /^\/api\/(terminal|clone|upload|scan)\//;
+const SENSITIVE_ROUTE = /^\/api\/(terminal|clone|upload|scan|env)\//;
 
 // Periodically reclaim memory from expired rate-limit buckets.
 setInterval(() => sensitiveLimiter.sweep(Date.now()), 60_000).unref();
@@ -275,6 +276,33 @@ export async function handleApiRequest(
     const pid = decodeURIComponent(syncMatch[1]);
     if (!authorize(pid)) return true;
     handleSyncRequest(res, pid, origin);
+    return true;
+  }
+
+  // GET /api/env/:projectId/events — SSE status stream
+  const envEventsMatch = url.match(/^\/api\/env\/([^/?]+)\/events/);
+  if (envEventsMatch && method === "GET") {
+    const pid = decodeURIComponent(envEventsMatch[1]);
+    if (!authorize(pid)) return true;
+    handleEnvEvents(req, res, pid, origin);
+    return true;
+  }
+
+  // POST /api/env/:projectId/start | rebuild | stop
+  const envActionMatch = url.match(/^\/api\/env\/([^/?]+)\/(start|rebuild|stop)/);
+  if (envActionMatch && method === "POST") {
+    const pid = decodeURIComponent(envActionMatch[1]);
+    if (!authorize(pid)) return true;
+    await handleEnvAction(res, pid, envActionMatch[2] as "start" | "rebuild" | "stop", origin);
+    return true;
+  }
+
+  // GET /api/env/:projectId — status
+  const envStatusMatch = url.match(/^\/api\/env\/([^/?]+)$/);
+  if (envStatusMatch && method === "GET") {
+    const pid = decodeURIComponent(envStatusMatch[1]);
+    if (!authorize(pid)) return true;
+    handleEnvStatus(res, pid, origin);
     return true;
   }
 
