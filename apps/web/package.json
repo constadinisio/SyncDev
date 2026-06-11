@@ -8,6 +8,7 @@
     "start": "next start --port 3000",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -26,6 +27,7 @@
     "yjs": "^13.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@storybook/addon-essentials": "^8.6.14",
     "@storybook/blocks": "^8.6.14",
     "@storybook/react": "^10.3.1",

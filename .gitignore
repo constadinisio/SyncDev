@@ -3,6 +3,9 @@ dist/
 .next/
 *.tsbuildinfo
 coverage/
+test-results/
+playwright-report/
+.playwright/
 
 # Storage (runtime data) — any location
 storage/snapshots/*.ystate
