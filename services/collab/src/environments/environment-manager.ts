@@ -154,4 +154,18 @@ export class EnvironmentManager {
       this.setStatus(state, "stopped");
     }
   }
+
+  async exec(projectId: string, command: string, timeoutMs: number): Promise<ExecResult> {
+    const state = await this.ensureRunning(projectId);
+    if (state.status !== "running") {
+      return { stdout: "", stderr: "Environment failed to start", exitCode: 1 };
+    }
+    state.lastActivity = this.now();
+    return this.deps.driver.exec(state.containerName, command, timeoutMs);
+  }
+
+  async rebuild(projectId: string): Promise<EnvironmentState> {
+    await this.stop(projectId, true);
+    return this.ensureRunning(projectId);
+  }
 }
