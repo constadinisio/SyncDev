@@ -118,6 +118,14 @@ export async function handleApiRequest(
     }
   }
 
+  // Environment endpoints are only available when the feature is enabled.
+  // Mirrors the terminal exec gate so /api/env/* can't drive the environment
+  // manager when ENVIRONMENTS_ENABLED is off.
+  if (url.startsWith("/api/env/") && !config.environments.enabled) {
+    json(res, 404, { error: "environments disabled" });
+    return true;
+  }
+
   // GET /health — liveness probe (process is up)
   if (url === "/health" && method === "GET") {
     json(res, 200, { status: "ok" });

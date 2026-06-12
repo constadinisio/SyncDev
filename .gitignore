@@ -17,6 +17,8 @@ storage/sandboxes/
 **/storage/projects/
 **/storage/sandboxes/
 services/collab/storage/
+storage/*.log
+**/storage/*.log
 
 # Environment
 .env.local

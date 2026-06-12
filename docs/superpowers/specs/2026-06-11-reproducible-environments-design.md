@@ -212,14 +212,15 @@ log lines. The Environment panel subscribes.
 These were specified but only partially implemented in the first cut; tracked
 for a follow-up (surfaced by the final review):
 
-- **Crash auto-recovery:** `ensureRunning` short-circuits on the in-memory
+- ~~**Crash auto-recovery:** `ensureRunning` short-circuits on the in-memory
   `running` status without re-inspecting, so a container that died (OOM/crash)
-  is reported as `running` until idle-stop or restart. Should `docker inspect`
-  on `status`/`exec` and restart a dead container.
+  is reported as `running` until idle-stop or restart.~~ **Done:** `ensureRunning`
+  now `docker inspect`s a container it believes is running and restarts it via
+  `start()` (which recreates if removed) when the container is gone.
 - **Build/postCreate log streaming:** the SSE hub is wired, but the manager only
   emits a `log` event on `setupFailed`, and the panel ignores `type:"log"`
   events. Stream pull/postCreate output to the panel.
-- **Minor:** REST `/api/env/*` actions are not gated by `ENVIRONMENTS_ENABLED`
-  (only terminal routing is); devcontainer.json change detection ("rebuild
-  needed"); image-pull retry; await/serialize eviction before starting the new
-  container.
+- **Minor:** ~~REST `/api/env/*` actions are not gated by `ENVIRONMENTS_ENABLED`
+  (only terminal routing is)~~ (**done:** all `/api/env/*` routes 404 when the
+  feature is disabled); devcontainer.json change detection ("rebuild needed");
+  image-pull retry; await/serialize eviction before starting the new container.
