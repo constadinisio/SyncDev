@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EnvironmentManager } from "./environment-manager.js";
 import type { DockerDriver } from "./docker-driver.js";
-import type { ResolvedDevcontainerConfig } from "./types.js";
+import type { ResolvedDevcontainerConfig, RunOptions } from "./types.js";
 
 const CONFIG: ResolvedDevcontainerConfig = {
   image: "node:20",
@@ -12,15 +12,35 @@ const CONFIG: ResolvedDevcontainerConfig = {
   workspaceFolder: "/workspace",
 };
 
+/**
+ * A fake driver that tracks container state, so `inspect` reflects reality
+ * after run/start/stop/rm. This lets us exercise the manager's re-inspect
+ * logic (crash auto-recovery) the same way the real Docker CLI would behave.
+ */
 function fakeDriver(overrides: Partial<DockerDriver> = {}): DockerDriver {
+  const present = new Set<string>();
+  const running = new Set<string>();
   return {
     pull: vi.fn().mockResolvedValue(undefined),
-    run: vi.fn().mockResolvedValue(undefined),
-    start: vi.fn().mockResolvedValue(undefined),
+    run: vi.fn(async (opts: RunOptions) => {
+      present.add(opts.name);
+      running.add(opts.name);
+    }),
+    start: vi.fn(async (name: string) => {
+      running.add(name);
+    }),
     exec: vi.fn().mockResolvedValue({ stdout: "", stderr: "", exitCode: 0 }),
-    stop: vi.fn().mockResolvedValue(undefined),
-    rm: vi.fn().mockResolvedValue(undefined),
-    inspect: vi.fn().mockResolvedValue({ exists: false, running: false }),
+    stop: vi.fn(async (name: string) => {
+      running.delete(name);
+    }),
+    rm: vi.fn(async (name: string) => {
+      running.delete(name);
+      present.delete(name);
+    }),
+    inspect: vi.fn(async (name: string) => ({
+      exists: present.has(name),
+      running: running.has(name),
+    })),
     ...overrides,
   };
 }
@@ -71,6 +91,31 @@ describe("EnvironmentManager.ensureRunning", () => {
   it("status returns stopped for an unknown project", () => {
     const mgr = makeManager(driver);
     expect(mgr.status("nope").status).toBe("stopped");
+  });
+
+  it("restarts a container that died while marked running", async () => {
+    const mgr = makeManager(driver);
+    await mgr.ensureRunning("proj-1");
+    // Simulate an OOM/crash: the container exits but is not removed.
+    await driver.stop("syncdev-env-proj-1");
+    (driver.start as ReturnType<typeof vi.fn>).mockClear();
+
+    const state = await mgr.ensureRunning("proj-1");
+
+    expect(state.status).toBe("running");
+    expect(driver.start).toHaveBeenCalledWith("syncdev-env-proj-1");
+  });
+
+  it("does not restart when the container is still alive", async () => {
+    const mgr = makeManager(driver);
+    await mgr.ensureRunning("proj-1");
+    (driver.start as ReturnType<typeof vi.fn>).mockClear();
+    (driver.run as ReturnType<typeof vi.fn>).mockClear();
+
+    await mgr.ensureRunning("proj-1");
+
+    expect(driver.start).not.toHaveBeenCalled();
+    expect(driver.run).not.toHaveBeenCalled();
   });
 });
 

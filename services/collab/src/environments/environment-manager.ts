@@ -68,11 +68,20 @@ export class EnvironmentManager {
     });
   }
 
-  ensureRunning(projectId: string): Promise<EnvironmentState> {
+  async ensureRunning(projectId: string): Promise<EnvironmentState> {
     const existing = this.states.get(projectId);
     if (existing && existing.status === "running") {
-      existing.lastActivity = this.now();
-      return Promise.resolve(existing);
+      // Re-inspect rather than trusting in-memory status: the container may
+      // have died (OOM/crash/manual removal) while we still report "running".
+      const inspect = await this.deps.driver.inspect(existing.containerName);
+      if (inspect.running) {
+        existing.lastActivity = this.now();
+        return existing;
+      }
+      logError(
+        "env",
+        `environment "${projectId}" was marked running but its container is not; restarting`,
+      );
     }
     const pending = this.inflight.get(projectId);
     if (pending) return pending;
