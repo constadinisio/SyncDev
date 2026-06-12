@@ -217,9 +217,12 @@ for a follow-up (surfaced by the final review):
   is reported as `running` until idle-stop or restart.~~ **Done:** `ensureRunning`
   now `docker inspect`s a container it believes is running and restarts it via
   `start()` (which recreates if removed) when the container is gone.
-- **Build/postCreate log streaming:** the SSE hub is wired, but the manager only
+- ~~**Build/postCreate log streaming:** the SSE hub is wired, but the manager only
   emits a `log` event on `setupFailed`, and the panel ignores `type:"log"`
-  events. Stream pull/postCreate output to the panel.
+  events.~~ **Done:** the `DockerDriver` now takes an optional `onLog` sink that
+  streams `docker pull`/`exec` stdout+stderr line-by-line; the manager forwards
+  those as `type:"log"` events during build/postCreate, and the panel renders
+  them in a scrollable log area (cleared on each new build).
 - **Minor:** ~~REST `/api/env/*` actions are not gated by `ENVIRONMENTS_ENABLED`
   (only terminal routing is)~~ (**done:** all `/api/env/*` routes 404 when the
   feature is disabled); devcontainer.json change detection ("rebuild needed");

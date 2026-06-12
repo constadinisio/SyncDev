@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { EnvironmentManager } from "./environment-manager.js";
+import { EnvironmentManager, type EnvironmentEvent } from "./environment-manager.js";
 import type { DockerDriver } from "./docker-driver.js";
 import type { ResolvedDevcontainerConfig, RunOptions } from "./types.js";
 
@@ -45,13 +45,17 @@ function fakeDriver(overrides: Partial<DockerDriver> = {}): DockerDriver {
   };
 }
 
-function makeManager(driver: DockerDriver) {
+function makeManager(
+  driver: DockerDriver,
+  onEvent?: (projectId: string, event: EnvironmentEvent) => void,
+) {
   return new EnvironmentManager({
     driver,
     loadConfig: () => CONFIG,
     hostWorkspacePath: (pid) => `/host/workspaces/${pid}`,
     limits: { memory: "512m", cpus: "1", pidsLimit: 512, network: "bridge", maxActive: 5 },
     now: () => 1000,
+    onEvent,
   });
 }
 
@@ -66,12 +70,13 @@ describe("EnvironmentManager.ensureRunning", () => {
     const state = await mgr.ensureRunning("proj-1");
     expect(state.status).toBe("running");
     expect(state.setupFailed).toBe(false);
-    expect(driver.pull).toHaveBeenCalledWith("node:20");
+    expect(driver.pull).toHaveBeenCalledWith("node:20", expect.any(Function));
     expect(driver.run).toHaveBeenCalledOnce();
     expect(driver.exec).toHaveBeenCalledWith(
       "syncdev-env-proj-1",
       "npm install",
       expect.any(Number),
+      expect.any(Function),
     );
   });
 
@@ -154,6 +159,43 @@ describe("EnvironmentManager.exec / error / rebuild / eviction", () => {
     await mgr.rebuild("proj-1");
     expect(driver.rm).toHaveBeenCalledWith("syncdev-env-proj-1");
     expect(driver.run).toHaveBeenCalledTimes(2);
+  });
+
+  it("streams pull and postCreate output as log events", async () => {
+    const driver = fakeDriver({
+      pull: vi.fn(async (_image: string, onLog?: (line: string) => void) => {
+        onLog?.("Pulling fs layer");
+      }),
+      exec: vi.fn(async (_n: string, _c: string, _t: number, onLog?: (line: string) => void) => {
+        onLog?.("added 5 packages");
+        return { stdout: "", stderr: "", exitCode: 0 };
+      }),
+    });
+    const events: EnvironmentEvent[] = [];
+    const mgr = makeManager(driver, (_pid, e) => events.push(e));
+
+    await mgr.ensureRunning("proj-1");
+
+    const logs = events.filter((e) => e.type === "log").map((e) => e.line);
+    expect(logs).toContain("Pulling fs layer");
+    expect(logs).toContain("added 5 packages");
+  });
+
+  it("does not stream log events for plain terminal exec", async () => {
+    const driver = fakeDriver({
+      exec: vi.fn(async (_n: string, _c: string, _t: number, onLog?: (line: string) => void) => {
+        onLog?.("should-not-leak");
+        return { stdout: "ok", stderr: "", exitCode: 0 };
+      }),
+    });
+    const events: EnvironmentEvent[] = [];
+    const mgr = makeManager(driver, (_pid, e) => events.push(e));
+    await mgr.ensureRunning("proj-1");
+    events.length = 0; // ignore build-phase logs
+
+    await mgr.exec("proj-1", "echo hi", 30_000);
+
+    expect(events.filter((e) => e.type === "log")).toHaveLength(0);
   });
 
   it("evicts the least-recently-active env when at maxActive", async () => {

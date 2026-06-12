@@ -28,8 +28,11 @@ const DOT: Record<EnvStatus, string> = {
   error: "bg-red-500",
 };
 
+const MAX_LOG_LINES = 200;
+
 export function EnvironmentPanel({ projectId }: EnvironmentPanelProps) {
   const [state, setState] = useState<EnvState>({ status: "stopped", setupFailed: false });
+  const [logs, setLogs] = useState<readonly string[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -39,7 +42,12 @@ export function EnvironmentPanel({ projectId }: EnvironmentPanelProps) {
       .catch(() => {});
     const unsub = subscribeEnvEvents(projectId, (e) => {
       if (e.type === "status" && e.status) {
+        // A fresh build replaces the previous run's output.
+        if (e.status === "building") setLogs([]);
         setState({ status: e.status, setupFailed: e.setupFailed ?? false });
+      } else if (e.type === "log" && e.line) {
+        const line = e.line;
+        setLogs((prev) => [...prev, line].slice(-MAX_LOG_LINES));
       }
     });
     return () => {
@@ -69,41 +77,50 @@ export function EnvironmentPanel({ projectId }: EnvironmentPanelProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 text-xs">
-      <span className={`h-2 w-2 rounded-full ${DOT[state.status]}`} />
-      <span className="font-medium text-surface-300">Env: {LABEL[state.status]}</span>
-      {state.setupFailed && <span className="text-amber-400">(setup failed)</span>}
-      <div className="ml-auto flex gap-1">
-        <button
-          disabled={busy}
-          onClick={create}
-          className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
-          title="Create a .devcontainer/devcontainer.json"
-        >
-          Create
-        </button>
-        <button
-          disabled={busy || state.status === "running"}
-          onClick={() => run("start")}
-          className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
-        >
-          Start
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => run("rebuild")}
-          className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
-        >
-          Rebuild
-        </button>
-        <button
-          disabled={busy || state.status === "stopped"}
-          onClick={() => run("stop")}
-          className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
-        >
-          Stop
-        </button>
+    <div className="flex flex-col text-xs">
+      <div className="flex items-center gap-2 px-3 py-1.5">
+        <span className={`h-2 w-2 rounded-full ${DOT[state.status]}`} />
+        <span className="font-medium text-surface-300">Env: {LABEL[state.status]}</span>
+        {state.setupFailed && <span className="text-amber-400">(setup failed)</span>}
+        <div className="ml-auto flex gap-1">
+          <button
+            disabled={busy}
+            onClick={create}
+            className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
+            title="Create a .devcontainer/devcontainer.json"
+          >
+            Create
+          </button>
+          <button
+            disabled={busy || state.status === "running"}
+            onClick={() => run("start")}
+            className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
+          >
+            Start
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => run("rebuild")}
+            className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
+          >
+            Rebuild
+          </button>
+          <button
+            disabled={busy || state.status === "stopped"}
+            onClick={() => run("stop")}
+            className="rounded px-2 py-0.5 hover:bg-surface-700 disabled:opacity-40"
+          >
+            Stop
+          </button>
+        </div>
       </div>
+      {logs.length > 0 && (
+        <pre className="max-h-40 overflow-auto border-t border-surface-700 bg-surface-900 px-3 py-1.5 font-mono text-[11px] leading-relaxed text-surface-400">
+          {logs.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </pre>
+      )}
     </div>
   );
 }

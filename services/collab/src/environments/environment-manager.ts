@@ -68,6 +68,11 @@ export class EnvironmentManager {
     });
   }
 
+  private emitLog(projectId: string, line: string): void {
+    if (!line) return;
+    this.deps.onEvent?.(projectId, { type: "log", line });
+  }
+
   async ensureRunning(projectId: string): Promise<EnvironmentState> {
     const existing = this.states.get(projectId);
     if (existing && existing.status === "running") {
@@ -108,7 +113,8 @@ export class EnvironmentManager {
         return state;
       }
 
-      await this.deps.driver.pull(config.image);
+      this.emitLog(projectId, `Pulling image ${config.image}…`);
+      await this.deps.driver.pull(config.image, (line) => this.emitLog(projectId, line));
       await this.deps.driver.run({
         name: state.containerName,
         image: config.image,
@@ -123,14 +129,16 @@ export class EnvironmentManager {
       });
 
       if (config.postCreateCommand) {
+        this.emitLog(projectId, `Running postCreateCommand: ${config.postCreateCommand}`);
         const res: ExecResult = await this.deps.driver.exec(
           state.containerName,
           config.postCreateCommand,
           POST_CREATE_TIMEOUT_MS,
+          (line) => this.emitLog(projectId, line),
         );
         state.setupFailed = res.exitCode !== 0;
         if (state.setupFailed) {
-          this.deps.onEvent?.(projectId, { type: "log", line: res.stderr || res.stdout });
+          this.emitLog(projectId, `postCreateCommand failed (exit ${res.exitCode})`);
           logError("env", `postCreateCommand failed for "${projectId}" (exit ${res.exitCode})`);
         }
       }
